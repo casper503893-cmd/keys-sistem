@@ -20,7 +20,7 @@ local isMobile  = UserInputService.TouchEnabled and not UserInputService.Keyboar
 -- SISTEMA DE KEYS ONLINE (JSONBIN) - CONFIGURA AQUÍ
 -- ============================================================
 local BIN_ID = "6af0f52fffd5d16053b1ec90" -- Ya configurado con tu imagen
-local API_KEY = "TU_MASTER_KEY_AQUI" -- ⚠️ PON TU MASTER KEY DE JSONBIN AQUÍ
+local API_KEY = "$2a$10$ClSD9LfwcPzOX6XJ41jNu.6KPWFcWwE4Ap.K1jT8Xg2ATtwU6zQjO" -- ⚠️ PON TU MASTER KEY DE JSONBIN AQUÍ
 
 local function GetKeys()
     local success, response = pcall(function()
