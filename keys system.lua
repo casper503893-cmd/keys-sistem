@@ -1,7 +1,14 @@
 --[[
-  CASPER HUB PREMIUM — v13.4
+  CASPER HUB PREMIUM — v13.6
   Móvil/PC + Delta/Xeno.
 
+  v13.6:
+   · Auto Loot Crate (recoge tu caja Crate_<tu nombre> con noclip y vuelve al drop)
+   · pausa Auto Farm / Clear Wave mientras lootea y los reanuda después
+  v13.5:
+   · sección Wave completa (Auto Play, Create/Start, votos, Clear Wave, Leave At Wave)
+   · anti-choque Wave ↔ Raid y Clear Wave ↔ Auto Farm
+   · pánico ampliado a las features de wave
   v13.4:
    · pantalla de carga por etapas (tokens > shell > runtime > tabs > boot)
    · render entre etapas, bucles escalonados, watchdog de 20s
@@ -51,7 +58,9 @@ local Config = {
     RefillCooldown = 5, RefillSpeed = 800, WaveSpeed = 1000,
     DamageMult = 10, HitCount = 5, AutoRetry = false, MassiveAttack = false,
     AutoCreateWave = false, AutoStartWave = false, AutoReady = false,
-    AutoVoteSkip = false, AutoPlay = false, WaveMap = "Trost", WaveLevel = "Easy",
+    AutoVoteSkip = false, AutoPlay = false, WaveMap = "Trost", WaveLevel = "Easy (E- Grade)",
+    WaveJoinDelay = 10, AutoClearWave = false, ClearWaveRange = 300,
+    AutoLeaveAtWave = false, LeaveAtWave = 10, AutoLootCrate = false,
     RaidSelect = "Attack Titan", RaidLevel = "Hard", RaidModifiers = {},
     RaidJoinDelay = 10, AutoCreateRaid = false, AutoStartRaid = false,
     AutoSkipCutscene = false, AutoOpenChestFree = false, AutoOpenChestPremium = false,
@@ -335,10 +344,11 @@ local function pushLog(title, message)
 end
 
 local CHANGELOG = {
+    "13.6 · Auto Loot Crate con noclip, pausa y reanuda el farm",
+    "13.5 · sección Wave completa, anti-choque Wave/Raid y Clear Wave/Auto Farm",
     "13.4 · pantalla de carga por etapas, watchdog y arranque escalonado",
     "13.3 · layout colapsado inicial, hitbox de sliders, escala sincronizada",
     "13.2 · compatibilidad móvil/PC, Delta y Xeno, sizing adaptativo",
-    "13.1 · reparto de la construcción para no pasar el límite de 200 registros",
 }
 
 -- ============================================================
@@ -362,7 +372,7 @@ local function buildLoader()
     local monogram = new("TextLabel", { Text = "C", Font = Enum.Font.GothamBlack, TextSize = 19, TextColor3 = Color3.new(1, 1, 1), TextTransparency = 1, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 5, Parent = logo })
 
     local title = new("TextLabel", { Text = "CASPER HUB", Font = Enum.Font.GothamBlack, TextSize = 17, TextColor3 = Color3.fromRGB(245, 247, 255), TextTransparency = 1, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 74), Size = UDim2.new(1, 0, 0, 20), ZIndex = 4, Parent = card })
-    local sub = new("TextLabel", { Text = "PREMIUM · v13.4", Font = Enum.Font.GothamBold, TextSize = 9, TextColor3 = accent, TextTransparency = 1, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 93), Size = UDim2.new(1, 0, 0, 13), ZIndex = 4, Parent = card })
+    local sub = new("TextLabel", { Text = "PREMIUM · v13.6", Font = Enum.Font.GothamBold, TextSize = 9, TextColor3 = accent, TextTransparency = 1, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 93), Size = UDim2.new(1, 0, 0, 13), ZIndex = 4, Parent = card })
 
     local stepLabel = new("TextLabel", { Text = "Iniciando", Font = Enum.Font.GothamMedium, TextSize = 11, TextColor3 = Color3.fromRGB(150, 158, 184), TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Position = UDim2.fromOffset(22, 122), Size = UDim2.new(1, -100, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 4, Parent = card })
     local percentLabel = new("TextLabel", { Text = "0%", Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = accent, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Right, BackgroundTransparency = 1, Position = UDim2.new(1, -70, 0, 122), Size = UDim2.fromOffset(48, 14), ZIndex = 4, Parent = card })
@@ -742,7 +752,7 @@ local function buildShell(S)
     ui.chipText = H.label(ui.chipHolder, "micro", "—", { Position = UDim2.fromOffset(19, 0), Size = UDim2.fromOffset(80, 20), TextColor3 = V.sub, ZIndex = 9 })
 
     local verBadge = new("Frame", { Size = UDim2.fromOffset(46, 18), Position = UDim2.fromOffset(186, 45), BackgroundColor3 = THEME.accent, BackgroundTransparency = 0.8, BorderSizePixel = 0, ZIndex = 8, Parent = header }, { corner(9) }); H.bindAccent(verBadge, "BackgroundColor3")
-    H.label(verBadge, "micro", "v13.4", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.new(1, 1, 1), ZIndex = 9 })
+    H.label(verBadge, "micro", "v13.6", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.new(1, 1, 1), ZIndex = 9 })
 
     local profile = new("Frame", { Size = UDim2.fromOffset(184, 40), Position = UDim2.new(1, -318, 0.5, -20), BackgroundColor3 = V.card, BackgroundTransparency = 0.45, BorderSizePixel = 0, ZIndex = 8, Parent = header }, { corner(20) })
     H.stroke(profile, V.strokeHi, 1, 0.5)
@@ -1017,7 +1027,7 @@ end
 -- ============================================================
 local function buildRuntime(S)
     local H = S.H
-    S.Farm = { Refilling = false, ReloadRejects = 0, ReloadSettleUntil = 0, BladesEmptyFor = 0, ActorSegments = nil, ActorReloads = nil, ActorActive = nil, SpearStuck = false, RecentlyRefilled = 0 }
+    S.Farm = { Refilling = false, ReloadRejects = 0, ReloadSettleUntil = 0, BladesEmptyFor = 0, ActorSegments = nil, ActorReloads = nil, ActorActive = nil, SpearStuck = false, RecentlyRefilled = 0, LootBusy = false }
     local Farm = S.Farm
     local RT = S.RT
     local VALID_KEYS = { W = true, A = true, S = true, D = true, L = true }
@@ -1720,12 +1730,527 @@ local function buildRuntime(S)
         return ok
     end
 
+    -- ==================== WAVE MODE ====================
+    S.WAVE_MAPS = { "Trost" }
+    S.WAVE_DIFFS = { "Easy (E- Grade)" }
+    if not table.find(S.WAVE_MAPS, Config.WaveMap) then Config.WaveMap = S.WAVE_MAPS[1] end
+    if not table.find(S.WAVE_DIFFS, Config.WaveLevel) then Config.WaveLevel = S.WAVE_DIFFS[1] end
+
+    local waveBusy = false
+    local waveRecreateAt = nil
+    S.waveStatusRef, S.waveClearRef = nil, nil
+
+    local function playOn() return Config.AutoPlay == true end
+    local function difficultyKey(label) return (tostring(label or ""):match("^(%S+)") or "Easy") end
+
+    local function waveStatus(text, isError)
+        if S.waveStatusRef then pcall(S.waveStatusRef, text, isError) end
+        if isError then S.notify("Wave", text, 3) end
+    end
+    local function setClear(text)
+        S.waveClear = text
+        if S.waveClearRef then pcall(S.waveClearRef.set, text) end
+    end
+
+    local function clearText(o)
+        local t = tostring(o.Text or ""):gsub("<[^>]->", "")
+        return (t:gsub("^%s+", ""):gsub("%s+$", ""))
+    end
+    local function isShown(obj)
+        local cur = obj
+        while cur and cur ~= playerGui do
+            if cur:IsA("GuiObject") and not cur.Visible then return false end
+            if cur:IsA("ScreenGui") and not cur.Enabled then return false end
+            cur = cur.Parent
+        end
+        return obj:IsA("GuiObject") and obj.AbsoluteSize.X > 0 and obj.AbsoluteSize.Y > 0
+    end
+
+    RT.requestWaveRecreate = function()
+        if Config.AutoCreateWave then waveRecreateAt = os.clock() + 1.5 end
+    end
+
+    RT.createWaveOnce = function(oneShot)
+        if not ON_LOBBY_PLACE then waveStatus("No estás en el lobby", true) return false end
+        if missionBusy or waveBusy then waveStatus("Ocupado, espera un momento", true) return false end
+        if oneShot and Config.AutoCreateRaid then
+            waveStatus("Apaga Auto Create Raid primero", true)
+            return false
+        end
+        waveBusy = true
+        local map = Config.WaveMap or S.WAVE_MAPS[1]
+        local diff = difficultyKey(Config.WaveLevel)
+        waveStatus("Saliendo de la sala anterior...")
+        RT.leaveRoom(true)
+        task.wait(0.6)
+        if not oneShot and not Config.AutoCreateWave then
+            waveStatus("Detenido (Auto Create apagado)")
+            waveBusy = false
+            return false
+        end
+        waveStatus(("Creando Waves (%s / %s)..."):format(map, diff))
+        local ok, r = RT.raidInvoke("S_Missions", "Create", { Difficulty = diff, Type = "Waves", Objective = "Waves", Name = map })
+        if not ok then
+            waveStatus("Create falló: " .. tostring(r), true)
+            waveBusy = false
+            return false
+        end
+        if r == nil or r == false then
+            RT.leaveRoom(true)
+            waveStatus("Create rechazado (bloqueado o sin sala)", true)
+            waveBusy = false
+            return false
+        end
+        local got = roomDifficulty(r)
+        if got ~= nil and got ~= diff then
+            RT.leaveRoom(true)
+            waveStatus(("Waves (%s) está bloqueado"):format(diff), true)
+            waveBusy = false
+            return false
+        end
+        createdRoom = (typeof(r) == "Instance") and r or createdRoom
+        waveStatus(("Sala creada: Waves / %s / %s"):format(map, diff))
+        waveBusy = false
+        return true
+    end
+
+    RT.startWave = function()
+        if not ON_LOBBY_PLACE then waveStatus("No estás en el lobby", true) return false end
+        if missionBusy or waveBusy then return false end
+        waveBusy = true
+        waveStatus("Iniciando wave...")
+        local ok, r = RT.raidInvoke("S_Missions", "Start")
+        local note = ""
+        if ok and type(r) == "string" and r ~= "" then note = " (" .. r .. ")" end
+        waveStatus(ok and ("Start enviado" .. note) or ("Start falló: " .. tostring(r)), not ok)
+        waveBusy = false
+        return ok
+    end
+
+    RT.leaveWaveRoom = function()
+        if not ON_LOBBY_PLACE then waveStatus("No estás en el lobby", true) return false end
+        local ok = RT.leaveRoom(true)
+        waveStatus(ok and "Leave enviado" or "Leave falló", not ok)
+        return ok
+    end
+
+    -- Votos (VOTE START / VOTE SKIP)
+    local function clickableFor(label)
+        if label:IsA("GuiButton") then return label end
+        local cur = label.Parent
+        for _ = 1, 3 do
+            if not cur or cur == playerGui then break end
+            if cur:IsA("GuiButton") then return cur end
+            cur = cur.Parent
+        end
+        local c = label.AbsolutePosition + label.AbsoluteSize / 2
+        local best, bestArea = nil, math.huge
+        for _, d in ipairs(playerGui:GetDescendants()) do
+            if d:IsA("GuiButton") and isShown(d) then
+                local pos, size = d.AbsolutePosition, d.AbsoluteSize
+                if c.X >= pos.X and c.X <= pos.X + size.X and c.Y >= pos.Y and c.Y <= pos.Y + size.Y then
+                    local area = size.X * size.Y
+                    if area < bestArea then best, bestArea = d, area end
+                end
+            end
+        end
+        return best
+    end
+    local function findReadyLabel(title)
+        local cur = title.Parent
+        for _ = 1, 6 do
+            if not cur or cur == playerGui then break end
+            for _, d in ipairs(cur:GetDescendants()) do
+                if (d:IsA("TextLabel") or d:IsA("TextButton")) and clearText(d):upper() == "READY" and isShown(d) then return d end
+            end
+            cur = cur.Parent
+        end
+        return nil
+    end
+    local function findCountLabel(title, ready)
+        local box = title.Parent
+        while box and box ~= playerGui and not ready:IsDescendantOf(box) do box = box.Parent end
+        if not box or box == playerGui then return nil end
+        for _, d in ipairs(box:GetDescendants()) do
+            if d:IsA("TextLabel") and clearText(d):match("^%d+%s*/%s*%d+$") and isShown(d) then return d end
+        end
+        return nil
+    end
+    local VOTE_SCAN, VOTE_GAP, VOTE_MAX = 2.0, 3, 3
+    local function startVoter(titleText, cfgKey)
+        local titleLabel, scanAt = nil, 0
+        local function findTitle()
+            if titleLabel and titleLabel.Parent then return isShown(titleLabel) and titleLabel or nil end
+            titleLabel = nil
+            if os.clock() - scanAt < VOTE_SCAN then return nil end
+            scanAt = os.clock()
+            for _, d in ipairs(playerGui:GetDescendants()) do
+                if (d:IsA("TextLabel") or d:IsA("TextButton")) and clearText(d):upper() == titleText then
+                    titleLabel = d
+                    return isShown(d) and d or nil
+                end
+            end
+            return nil
+        end
+        task.spawn(function()
+            local presses, lastPress, countBefore, voted = 0, 0, nil, false
+            local function reset() presses, lastPress, countBefore, voted = 0, 0, nil, false end
+            while S.ui.gui and S.ui.gui.Parent do
+                task.wait(0.5)
+                if not (Config[cfgKey] and playOn()) or not CanUseHere() then
+                    reset()
+                else
+                    local title = findTitle()
+                    if not title then
+                        reset()
+                    else
+                        local label = findReadyLabel(title)
+                        if label and not voted then
+                            local countLabel = findCountLabel(title, label)
+                            local countText = countLabel and clearText(countLabel) or nil
+                            local a, b
+                            if countText then a, b = countText:match("^(%d+)%s*/%s*(%d+)$") end
+                            if a and b and tonumber(a) >= tonumber(b) then
+                                voted = true
+                            elseif presses > 0 and countText and countBefore and countText ~= countBefore then
+                                voted = true
+                            elseif os.clock() - lastPress >= VOTE_GAP and presses < (countText and VOTE_MAX or 1) then
+                                local btn = clickableFor(label)
+                                if btn then
+                                    presses += 1
+                                    lastPress = os.clock()
+                                    countBefore = countText
+                                    clickGui(btn)
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    end
+    RT.voteLoop = function()
+        task.wait(2)
+        startVoter("VOTE START", "AutoReady")
+        startVoter("VOTE SKIP", "AutoVoteSkip")
+    end
+
+    -- Clear Wave: ataca sin moverse
+    local function napesInRange(root, range)
+        local titans = Workspace:FindFirstChild("Titans")
+        if not titans then return {}, 0 end
+        local list, alive = {}, 0
+        for _, t in ipairs(titans:GetChildren()) do
+            if t:IsA("Model") then
+                local hum = t:FindFirstChildOfClass("Humanoid")
+                local n = napeOf(t)
+                if hum and hum.Health > 0 and n then
+                    alive += 1
+                    local d = (n.Position - root.Position).Magnitude
+                    if d <= range then list[#list + 1] = { part = n, d = d } end
+                end
+            end
+        end
+        table.sort(list, function(x, y) return x.d < y.d end)
+        return list, alive
+    end
+    local function slashParts(parts)
+        local post = getPost()
+        if not post or #parts == 0 then return false end
+        pcall(function()
+            post:FireServer("Attacks", "Slash", true)
+            for _ = 1, math.max(1, tonumber(Config.DamageMult) or 1) do
+                for _, part in ipairs(parts) do
+                    post:FireServer("Hitboxes", "Register", part, 143 + math.random() * 10, 0.26 + math.random() * 0.25)
+                end
+            end
+            post:FireServer("Attacks", "Slash", false)
+        end)
+        return true
+    end
+    RT.clearWaveLoop = function()
+        task.wait(3)
+        while S.ui.gui and S.ui.gui.Parent do
+            task.wait(0.35)
+            pcall(function()
+                if not (Config.AutoClearWave and playOn()) then
+                    setClear(Config.AutoClearWave and "Esperando Auto Play" or "Off")
+                    return
+                end
+                if not CanUseHere() then setClear("Esperando partida") return end
+                if Farm.LootBusy then setClear("Pausado (caja)") return end
+                if Farm.Refilling or isRefilling then setClear("Pausado (refill)") return end
+                local root = getRoot()
+                if not root then setClear("Esperando personaje") return end
+                local range = math.clamp(tonumber(Config.ClearWaveRange) or 300, 50, 2000)
+                local list, alive = napesInRange(root, range)
+                if #list == 0 then
+                    setClear((alive or 0) == 0 and "Sin titanes vivos" or ("Sin titanes en rango (%d vivos)"):format(alive))
+                    return
+                end
+                local cap = math.max(1, tonumber(Config.HitCount) or 1)
+                local parts = {}
+                for i = 1, math.min(cap, #list) do parts[i] = list[i].part end
+                if slashParts(parts) then
+                    setClear(("Limpiando: %d en rango (%d vivos)"):format(#parts, alive))
+                end
+            end)
+        end
+    end
+
+    -- Leave At Wave
+    local waveLabel, waveScanAt = nil, 0
+    local function wavesCleared()
+        if not (waveLabel and waveLabel.Parent) then
+            waveLabel = nil
+            if os.clock() - waveScanAt < 2 then return nil end
+            waveScanAt = os.clock()
+            for _, d in ipairs(playerGui:GetDescendants()) do
+                if (d:IsA("TextLabel") or d:IsA("TextButton")) and clearText(d):lower():match("^waves cleared%s*%[%d+%s*/%s*%d+%]") then
+                    waveLabel = d
+                    break
+                end
+            end
+        end
+        if not waveLabel or not isShown(waveLabel) then return nil end
+        local a = clearText(waveLabel):match("%[(%d+)%s*/")
+        return a and tonumber(a) or nil
+    end
+    local function leaveMatch()
+        local post = getPost()
+        if not post then return false end
+        return (pcall(function() post:FireServer("Functions", "Teleport") end))
+    end
+    RT.leaveAtWaveLoop = function()
+        task.wait(3)
+        local firedAt = nil
+        while S.ui.gui and S.ui.gui.Parent do
+            task.wait(1)
+            if not (Config.AutoLeaveAtWave and playOn()) or not CanUseHere() then
+                firedAt = nil
+            else
+                local cleared = wavesCleared()
+                if not cleared then
+                    firedAt = nil
+                elseif cleared >= (tonumber(Config.LeaveAtWave) or 10) and (not firedAt or os.clock() - firedAt > 15) then
+                    firedAt = os.clock()
+                    S.notify("Wave", ("Saliendo: %d waves limpiadas"):format(cleared), 2)
+                    leaveMatch()
+                end
+            end
+        end
+    end
+
+    RT.autoCreateWaveLoop = function()
+        task.wait(4)
+        local readyAt = os.clock() + 4
+        local fails, nextTry = 0, 0
+        while S.ui.gui and S.ui.gui.Parent do
+            task.wait(0.5)
+            local now = os.clock()
+            if ON_LOBBY_PLACE and Config.AutoCreateWave and playOn() and not missionBusy and not waveBusy and now >= readyAt then
+                local need = false
+                if waveRecreateAt and now >= waveRecreateAt then
+                    waveRecreateAt = nil
+                    need = true
+                elseif now >= nextTry and not hasRoom() then
+                    need = true
+                end
+                if need then
+                    if RT.createWaveOnce(false) then
+                        fails = 0
+                        nextTry = os.clock() + 20
+                    elseif Config.AutoCreateWave then
+                        fails += 1
+                        nextTry = os.clock() + 8
+                        if fails >= 3 then
+                            fails = 0
+                            Config.AutoCreateWave = false
+                            EventBus:Emit("ConfigChanged", "AutoCreateWave", false)
+                            waveStatus("Auto Create detenido (3 fallos)", true)
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    RT.autoStartWaveLoop = function()
+        task.wait(4)
+        local lastFire = nil
+        while S.ui.gui and S.ui.gui.Parent do
+            task.wait(0.5)
+            if not ON_LOBBY_PLACE or not Config.AutoStartWave or not playOn() or not hasRoom() then
+                lastFire = nil
+            else
+                local now = os.clock()
+                local delay = math.clamp(tonumber(Config.WaveJoinDelay) or 10, 5, 60)
+                if not lastFire then lastFire = now end
+                if lastFire + delay - now <= 0 then
+                    RT.startWave()
+                    lastFire = os.clock()
+                end
+            end
+        end
+    end
+
+    -- ==================== AUTO LOOT CRATE ====================
+    local DROP_POS = Vector3.new(-745.373169, 6.16312218, 174.26799)
+    local LOOT_HEIGHT = 150
+    local MAX_CRATE_DIST = 5000
+    local MAX_CRATE_UP = 600
+    local MAX_CRATE_DOWN = 400
+    local CRATE_COOLDOWN = 3
+    S.lootStatusRef = nil
+
+    local function lootStatus(text)
+        S.lootStatus = text
+        if S.lootStatusRef then pcall(S.lootStatusRef.set, text) end
+    end
+
+    local function liveRoot()
+        local char = player.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if root and hum and hum.Health > 0 then return root end
+        return nil
+    end
+
+    local function setNoClip(on)
+        local char = player.Character
+        if not char then return end
+        for _, d in ipairs(char:GetDescendants()) do
+            if d:IsA("BasePart") then
+                if on then
+                    if d.CanCollide then d:SetAttribute("SH_Col", true) end
+                    d.CanCollide = false
+                elseif d:GetAttribute("SH_Col") then
+                    d.CanCollide = true
+                    d:SetAttribute("SH_Col", nil)
+                end
+            end
+        end
+    end
+
+    local function flyTo(targetPos, maxTime)
+        local r0 = liveRoot()
+        if r0 then
+            local need = (targetPos - r0.Position).Magnitude / (Config.FlySpeed or 600) + 1
+            if need > maxTime then maxTime = need end
+            pcall(function() player:RequestStreamAroundAsync(targetPos, 0.5) end)
+        end
+        local elapsed = 0
+        while elapsed < maxTime and Alive() do
+            local dt = task.wait()
+            elapsed = elapsed + dt
+            local root = liveRoot()
+            if not root then return end
+            local diff = targetPos - root.Position
+            local dist = diff.Magnitude
+            if dist < 2 then break end
+            local step = math.min((Config.FlySpeed or 600) * dt, dist)
+            root.CFrame = CFrame.new(root.Position + diff.Unit * step)
+            pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+        end
+    end
+
+    local function heightOf(pos) return pos + Vector3.new(0, LOOT_HEIGHT, 0) end
+
+    local function nearestCrate(root)
+        local waves = Workspace:FindFirstChild("Waves")
+        local folder = waves and waves:FindFirstChild("Crates")
+        if not folder then return nil end
+        local best, bestDist = nil, MAX_CRATE_DIST
+        local mine1 = ("crate_" .. player.Name):lower()
+        local mine2 = ("crate_" .. (player.DisplayName or player.Name)):lower()
+        for _, crate in ipairs(folder:GetChildren()) do
+            local cname = crate.Name:lower()
+            if cname == mine1 or cname == mine2 then
+                local hitbox = crate:FindFirstChild("Hitbox")
+                if not hitbox and crate:IsA("BasePart") then hitbox = crate end
+                if hitbox and hitbox:IsA("BasePart") then
+                    local hp = hitbox.Position
+                    local finite = hp.X == hp.X and hp.Y == hp.Y and hp.Z == hp.Z and math.abs(hp.Y) < 1e5
+                    local dy = hp.Y - root.Position.Y
+                    if finite and dy <= MAX_CRATE_UP and dy >= -MAX_CRATE_DOWN then
+                        local d = (hp - root.Position).Magnitude
+                        if d < bestDist then best, bestDist = hitbox, d end
+                    end
+                end
+            end
+        end
+        return best
+    end
+
+    local function lootCycle(crate)
+        local wasFarm, wasClear = Config.AutoFarm, Config.AutoClearWave
+        Config.AutoFarm = false; EventBus:Emit("ConfigChanged", "AutoFarm", false)
+        Config.AutoClearWave = false; EventBus:Emit("ConfigChanged", "AutoClearWave", false)
+        setNoClip(true)
+        pcall(function()
+            lootStatus("Recogiendo caja (noclip)...")
+            local root = liveRoot()
+            if not root then return end
+            flyTo(heightOf(root.Position), 0.5)
+            flyTo(heightOf(crate.Position), 1.5)
+            flyTo(crate.Position + Vector3.new(0, 3, 0), 0.5)
+            task.wait(0.3)
+            lootStatus("Volviendo al punto de drop...")
+            root = liveRoot()
+            if not root then return end
+            flyTo(heightOf(root.Position), 0.5)
+            flyTo(heightOf(DROP_POS), 1.5)
+            flyTo(DROP_POS, 0.5)
+            task.wait(0.5)
+        end)
+        setNoClip(false)
+        if wasFarm then Config.AutoFarm = true; EventBus:Emit("ConfigChanged", "AutoFarm", true) end
+        if wasClear then Config.AutoClearWave = true; EventBus:Emit("ConfigChanged", "AutoClearWave", true) end
+        lootStatus((wasFarm or wasClear) and "Vuelto. Reanudando." or "Vuelto.")
+    end
+
+    RT.lootLoop = function()
+        task.wait(3)
+        local crateCooldown = 0
+        local lootTries = setmetatable({}, { __mode = "k" })
+        while S.ui.gui and S.ui.gui.Parent do
+            task.wait(0.5)
+            if not (Config.AutoLootCrate and playOn()) or not CanUseHere() then
+                Farm.LootBusy = false
+                lootStatus(Config.AutoLootCrate and "Esperando Auto Play" or "Off")
+            else
+                local root = liveRoot()
+                local anyCrate = root and nearestCrate(root) or nil
+                if anyCrate and (lootTries[anyCrate] or 0) >= 3 then
+                    if lootTries[anyCrate] == 3 then lootTries[anyCrate] = 4 end
+                    anyCrate = nil
+                end
+                local crate = (anyCrate and os.clock() > crateCooldown) and anyCrate or nil
+                if crate and Farm.Refilling then
+                    lootStatus("Caja lista. Esperando refill...")
+                elseif crate then
+                    Farm.LootBusy = true
+                    pcall(lootCycle, crate)
+                    Farm.LootBusy = false
+                    local tries = (lootTries[crate] or 0) + 1
+                    lootTries[crate] = tries
+                    crateCooldown = os.clock() + CRATE_COOLDOWN + (tries - 1) * 5
+                elseif root then
+                    lootStatus((Config.AutoFarm or Config.AutoClearWave) and "Sin caja. Atacando..." or "Sin caja. Esperando...")
+                else
+                    lootStatus("Esperando personaje")
+                end
+            end
+        end
+        Farm.LootBusy = false
+    end
+
     -- ==================== LOOPS ====================
     RT.farmLoop = function()
         task.wait(3)
         while S.ui.gui and S.ui.gui.Parent do
             local dt = RunService.Heartbeat:Wait()
-            if Config.AutoFarm and not isRefilling then
+            if Config.AutoFarm and not isRefilling and not Farm.LootBusy then
                 local root = getRoot(); local titan = getTitan()
                 if root and titan then
                     local nape = napeOf(titan)
@@ -2149,6 +2674,7 @@ local function buildRuntime(S)
         "AutoFarm", "AutoSkill", "AutoEscape", "AutoRetry", "AutoRefillBlade", "AutoRefillThunder",
         "AutoRefillWave", "AutoCreateRaid", "AutoStartRaid", "AutoSkipCutscene", "AutoOpenChestFree",
         "AutoOpenChestPremium", "AutoFinishChest", "AutoCannon", "MassiveAttack", "AutoPlay", "AutoCreateWave",
+        "AutoStartWave", "AutoReady", "AutoVoteSkip", "AutoClearWave", "AutoLeaveAtWave", "AutoLootCrate",
     }
     local function setFlags(map)
         for _, key in ipairs(TOGGLE_KEYS) do
@@ -2166,6 +2692,7 @@ local function buildRuntime(S)
     S.PRESETS = {
         { name = "Farm AFK", tip = "Farm, skill y refill automático", flags = { AutoFarm = true, AutoSkill = true, AutoRefillBlade = true, AutoRefillThunder = true, AutoEscape = true } },
         { name = "Wave grind", tip = "Refill de oleada + farm", flags = { AutoRefillWave = true, AutoFarm = true, AutoSkill = true, AutoEscape = true } },
+        { name = "Wave auto", tip = "Crea, inicia, limpia y lootea solo", flags = { AutoPlay = true, AutoCreateWave = true, AutoStartWave = true, AutoReady = true, AutoVoteSkip = true, AutoClearWave = true, AutoLootCrate = true } },
         { name = "Raid solo", tip = "Prepara raid con skips y cofres", flags = { AutoSkipCutscene = true, AutoCannon = true, AutoOpenChestFree = true, AutoFinishChest = true } },
         { name = "Limpio", tip = "Apaga todo", flags = {} },
     }
@@ -2669,7 +3196,13 @@ local function buildTabs(S)
 
     S.addTab("Farm", "Combate", "farm", "Automatización y combate", function(api)
         api.Section("Automatización")
-        api.Toggle("Auto Farm", "AutoFarm", function(s) S.notify("Auto Farm", s and "Activado" or "Desactivado", 2) end, { requires = "game", tip = "Vuela al titán más cercano y ataca la nuca" })
+        api.Toggle("Auto Farm", "AutoFarm", function(s)
+            if s and Config.AutoClearWave then
+                Config.AutoClearWave = false
+                EventBus:Emit("ConfigChanged", "AutoClearWave", false)
+            end
+            S.notify("Auto Farm", s and "Activado" or "Desactivado", 2)
+        end, { requires = "game", tip = "Vuela al titán más cercano y ataca la nuca" })
         api.Toggle("Auto Skill", "AutoSkill", function(s) S.notify("Auto Skill", s and "Activado" or "Desactivado", 2) end, { requires = "game", tip = "Pulsa las skills 1-5 en bucle" })
         api.Section("Ajustes de vuelo")
         api.Slider("Velocidad", 100, 1500, "FlySpeed")
@@ -2680,13 +3213,82 @@ local function buildTabs(S)
         api.Slider("Titanes por ataque", 1, 15, "HitCount")
     end)
 
-    S.addTab("Wave", "Combate", "wave", "Refill en oleadas", function(api)
+    S.addTab("Wave", "Combate", "wave", "Wave mode, votos y limpieza", function(api)
+        api.Section("Interruptor maestro")
+        api.Toggle("Auto Play", "AutoPlay", function(s)
+            if s then
+                local any = false
+                for _, k in ipairs({ "AutoCreateWave", "AutoStartWave", "AutoReady", "AutoVoteSkip", "AutoClearWave", "AutoLootCrate" }) do
+                    if Config[k] then any = true break end
+                end
+                if not any then
+                    for _, k in ipairs({ "AutoCreateWave", "AutoStartWave", "AutoReady", "AutoVoteSkip" }) do
+                        Config[k] = true
+                        EventBus:Emit("ConfigChanged", k, true)
+                    end
+                end
+                S.notify("Auto Play", "ON", 2)
+            else
+                S.notify("Auto Play", "OFF (wave en pausa)", 2)
+            end
+        end, { tip = "Las features de wave solo corren con esto ON" })
+        local waveStatusLabel = api.Label("Estado: inactivo", 16)
+        S.waveStatusRef = function(text)
+            waveStatusLabel.set("Estado: " .. tostring(text))
+        end
+
+        api.Section("Sala de wave")
+        api.Dropdown("Mapa", S.WAVE_MAPS, "WaveMap", function() RT.requestWaveRecreate() end)
+        api.Dropdown("Dificultad", S.WAVE_DIFFS, "WaveLevel", function() RT.requestWaveRecreate() end)
+        api.Button("Crear Wave ahora", function() RT.createWaveOnce(true) end, { requires = "lobby" })
+        api.Button("Iniciar Wave ahora", function() RT.startWave() end, { requires = "lobby" })
+        api.Button("Salir de la sala", function() RT.leaveWaveRoom() end, { requires = "lobby" })
+
+        api.Section("Automatización")
+        api.Toggle("Auto Create Wave", "AutoCreateWave", function(s)
+            if s then
+                Config.AutoCreateRaid = false; EventBus:Emit("ConfigChanged", "AutoCreateRaid", false)
+                Config.AutoStartRaid = false; EventBus:Emit("ConfigChanged", "AutoStartRaid", false)
+                RT.requestWaveRecreate()
+            end
+            S.notify("Auto Create Wave", s and "ON" or "OFF", 2)
+        end, { requires = "lobby", tip = "Mantiene una sala de wave lista" })
+        api.Toggle("Auto Start Wave", "AutoStartWave", function(s)
+            if s then
+                Config.AutoCreateRaid = false; EventBus:Emit("ConfigChanged", "AutoCreateRaid", false)
+                Config.AutoStartRaid = false; EventBus:Emit("ConfigChanged", "AutoStartRaid", false)
+            end
+            S.notify("Auto Start Wave", s and "ON" or "OFF", 2)
+        end, { requires = "lobby" })
+        api.Slider("Join Delay (s)", 5, 60, "WaveJoinDelay")
+
+        api.Section("Votos")
+        api.Toggle("Auto Ready", "AutoReady", function(s) S.notify("Auto Ready", s and "ON" or "OFF", 2) end, { requires = "game", tip = "Vota para empezar" })
+        api.Toggle("Auto Vote Skip", "AutoVoteSkip", function(s) S.notify("Auto Vote Skip", s and "ON" or "OFF", 2) end, { requires = "game", tip = "Vota para saltar la espera" })
+
+        api.Section("Limpiar oleada")
+        api.Toggle("Auto Clear Wave", "AutoClearWave", function(s)
+            if s then
+                Config.AutoFarm = false; EventBus:Emit("ConfigChanged", "AutoFarm", false)
+            end
+            S.notify("Auto Clear Wave", s and "ON (Auto Farm apagado)" or "OFF", 2)
+        end, { requires = "game", tip = "Ataca sin moverte; apaga Auto Farm" })
+        api.Slider("Rango de ataque", 50, 2000, "ClearWaveRange")
+        S.waveClearRef = api.Label("Off", 14)
+
+        api.Section("Caja de habilidades")
+        api.Toggle("Auto Loot Crate", "AutoLootCrate", function(s)
+            S.notify("Loot Crate", s and "ON" or "OFF", 2)
+        end, { requires = "game", tip = "Recoge tu caja (Crate_tuNombre) con noclip y vuelve al drop" })
+        S.lootStatusRef = api.Label("Off", 14)
+
+        api.Section("Salir por waves")
+        api.Toggle("Auto Leave At Wave", "AutoLeaveAtWave", function(s) S.notify("Leave At Wave", s and "ON" or "OFF", 2) end, { requires = "game" })
+        api.Slider("Salir tras N waves", 1, 50, "LeaveAtWave")
+
         api.Section("Refill en Wave")
         api.Toggle("Auto Refill Wave", "AutoRefillWave", function(s) S.notify("Refill Wave", s and "Activado" or "Desactivado", 2) end, { requires = "game", tip = "Repone en estaciones de oleada" })
         api.Slider("Velocidad Refill Wave", 100, 2000, "WaveSpeed")
-        api.Section("Ajustes")
-        api.Dropdown("Mapa", { "Trost", "Shiganshina", "Utgard" }, "WaveMap")
-        api.Label("Se ejecuta junto a Auto Create Wave.")
     end)
 
     S.addTab("Raid", "Combate", "raid", "Modo raid y cofres", function(api)
@@ -2721,11 +3323,19 @@ local function buildTabs(S)
         end)
         api.Section("Auto Raid")
         api.Toggle("Auto Create Raid", "AutoCreateRaid", function(s)
-            if s then Config.AutoStartRaid = false; EventBus:Emit("ConfigChanged", "AutoStartRaid", false) end
+            if s then
+                Config.AutoStartRaid = false; EventBus:Emit("ConfigChanged", "AutoStartRaid", false)
+                Config.AutoCreateWave = false; EventBus:Emit("ConfigChanged", "AutoCreateWave", false)
+                Config.AutoStartWave = false; EventBus:Emit("ConfigChanged", "AutoStartWave", false)
+            end
             S.notify("Raid", "Auto Create: " .. (s and "ON" or "OFF"), 2)
         end, { requires = "lobby", tip = "Crea la raid seleccionada al entrar al lobby" })
         api.Toggle("Auto Start Raid", "AutoStartRaid", function(s)
-            if s then Config.AutoCreateRaid = false; EventBus:Emit("ConfigChanged", "AutoCreateRaid", false) end
+            if s then
+                Config.AutoCreateRaid = false; EventBus:Emit("ConfigChanged", "AutoCreateRaid", false)
+                Config.AutoCreateWave = false; EventBus:Emit("ConfigChanged", "AutoCreateWave", false)
+                Config.AutoStartWave = false; EventBus:Emit("ConfigChanged", "AutoStartWave", false)
+            end
             S.notify("Raid", "Auto Start: " .. (s and "ON" or "OFF"), 2)
         end, { requires = "lobby", tip = "Inicia la sala tras el retardo" })
         api.Slider("Join Delay (s)", 5, 60, "RaidJoinDelay")
@@ -3164,7 +3774,7 @@ local function boot(S)
 
     local function refreshStatus()
         local active = {}
-        for _, key in ipairs({ "AutoFarm", "AutoSkill", "AutoRefillBlade", "AutoRefillThunder", "AutoRefillWave", "AutoEscape", "AutoRetry", "AutoCreateRaid", "AutoStartRaid", "AutoCannon" }) do
+        for _, key in ipairs({ "AutoFarm", "AutoSkill", "AutoRefillBlade", "AutoRefillThunder", "AutoRefillWave", "AutoEscape", "AutoRetry", "AutoCreateRaid", "AutoStartRaid", "AutoCannon", "AutoCreateWave", "AutoStartWave", "AutoClearWave", "AutoLootCrate" }) do
             if Config[key] then active[#active + 1] = key:gsub("Auto", "") end
         end
         if #active > 0 then
@@ -3179,7 +3789,7 @@ local function boot(S)
         for _, t in ipairs(S.tabs) do
             local on = false
             if t.name == "Farm" then on = Config.AutoFarm or Config.AutoSkill
-            elseif t.name == "Wave" then on = Config.AutoRefillWave
+            elseif t.name == "Wave" then on = Config.AutoCreateWave or Config.AutoStartWave or Config.AutoClearWave or Config.AutoLeaveAtWave or Config.AutoReady or Config.AutoVoteSkip or Config.AutoLootCrate
             elseif t.name == "Refill" then on = Config.AutoRefillBlade or Config.AutoRefillThunder
             elseif t.name == "Escape" then on = Config.AutoEscape
             elseif t.name == "Auto Click" then on = Config.AutoRetry
@@ -3222,7 +3832,7 @@ local function boot(S)
     end)
 
     -- Arranque escalonado: ningún bucle entra en el mismo frame que otro.
-    local LOOP_NAMES = { "farmLoop", "clickLoop", "skillLoop", "refillLoop", "waveLoop", "watchLoop", "skipLoop", "chestLoop", "cannonLoop", "autoCreateLoop", "autoStartLoop" }
+    local LOOP_NAMES = { "farmLoop", "clickLoop", "skillLoop", "refillLoop", "waveLoop", "watchLoop", "skipLoop", "chestLoop", "cannonLoop", "autoCreateLoop", "autoStartLoop", "voteLoop", "clearWaveLoop", "leaveAtWaveLoop", "autoCreateWaveLoop", "autoStartWaveLoop", "lootLoop" }
     for i, name in ipairs(LOOP_NAMES) do
         if RT[name] then
             task.spawn(function()
@@ -3240,22 +3850,6 @@ local function boot(S)
                 RT.pressButtonByName("WAVES"); task.wait(1)
                 RT.pressButtonByName("CREATE"); task.wait(1)
                 RT.pressButtonByName("START")
-            end
-        end
-    end)
-    task.spawn(function()
-        task.wait(0.6)
-        while ui.gui and ui.gui.Parent do
-            task.wait(0.5)
-            if Config.AutoPlay and CanUseHere() then
-                if Config.AutoReady then
-                    RT.pressButtonByName("READY", true)
-                    RT.pressButtonByName("ACCEPT", true)
-                end
-                if Config.AutoVoteSkip then
-                    RT.pressButtonByName("VOTE SKIP")
-                    RT.pressButtonByName("SKIP", true)
-                end
             end
         end
     end)
@@ -3284,8 +3878,8 @@ local function boot(S)
     if startTab then S.selectTab(startTab) end
     if S.syncMobile then S.syncMobile() end
 
-    S.notify("CASPER HUB PREMIUM v13.4", isMobile and "Interfaz lista · botón flotante para abrir" or ("Interfaz lista · " .. Config.Keybind), 4)
-    print("[CASPER HUB PREMIUM v13.4] Cargado con éxito.")
+    S.notify("CASPER HUB PREMIUM v13.6", isMobile and "Interfaz lista · botón flotante para abrir" or ("Interfaz lista · " .. Config.Keybind), 4)
+    print("[CASPER HUB PREMIUM v13.6] Cargado con éxito.")
 end
 
 -- ============================================================
