@@ -1,7 +1,11 @@
 --[[
-  CASPER HUB PREMIUM — v14.1
+  CASPER HUB PREMIUM — v14.2
   Móvil/PC + Delta/Xeno.
 
+  v14.2:
+   · farmLoop reescrito: hover por velocidad, altitud retenida y ataque no bloqueante
+   · distancia de ataque acotada 60-200 (FlyHeight pasa a ser distancia, default 120)
+   · nunca se queda con velocidad 0 al golpear: el daño escala y el registro entra
   v14.1:
    · hotkey para Auto Clear Wave en Ajustes
   v14.0:
@@ -69,7 +73,7 @@ CheckSavedKey()
 -- CONFIG
 -- ============================================================
 local Config = {
-    AutoFarm = false, FlySpeed = 600, FlyHeight = 230, AutoSkill = false,
+    AutoFarm = false, FlySpeed = 600, FlyHeight = 120, AutoSkill = false,
     AutoEscape = false, EscapeCooldownX100 = 15, EscapeMinSize = 20, DebugEscape = false,
     AutoRefillBlade = false, AutoRefillThunder = false, AutoRefillWave = false, AutoReloadR = true,
     RefillCooldown = 5, RefillSpeed = 800, WaveSpeed = 1000,
@@ -96,6 +100,7 @@ if isMobile then
     Config.CursorEnabled = false
     Config.UICollapsed = true
     Config.FlySpeed = 420
+    Config.FlyHeight = 120
     Config.UIWinW = nil
     Config.UIWinH = nil
 end
@@ -286,6 +291,7 @@ else
         for k, v in pairs(sd.Cfg) do if Config[k] ~= nil and type(Config[k]) == type(v) then Config[k] = v end end
     end
 end
+Config.FlyHeight = math.clamp(tonumber(Config.FlyHeight) or 120, 60, 200)
 SettingsStore.StartAutoSave("AOTR", function() return { Cfg = Config } end)
 SettingsStore.OnSaved = function() pcall(ConfigStore.SyncActive) end
 
@@ -361,6 +367,7 @@ local function pushLog(title, message)
 end
 
 local CHANGELOG = {
+    "14.2 · farmLoop con hover por velocidad, distancia acotada y altitud retenida",
     "14.1 · hotkey para Auto Clear Wave",
     "14.0 · recarga automática a 0 blades con pausa total y tecla de menú elegible",
     "13.9 · Auto Reload R propio + bloqueo de refill con caducidad y watchdog",
@@ -391,7 +398,7 @@ local function buildLoader()
     local monogram = new("TextLabel", { Text = "C", Font = Enum.Font.GothamBlack, TextSize = 19, TextColor3 = Color3.new(1, 1, 1), TextTransparency = 1, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 5, Parent = logo })
 
     local title = new("TextLabel", { Text = "CASPER HUB", Font = Enum.Font.GothamBlack, TextSize = 17, TextColor3 = Color3.fromRGB(245, 247, 255), TextTransparency = 1, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 74), Size = UDim2.new(1, 0, 0, 20), ZIndex = 4, Parent = card })
-    local sub = new("TextLabel", { Text = "PREMIUM · v14.1", Font = Enum.Font.GothamBold, TextSize = 9, TextColor3 = accent, TextTransparency = 1, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 93), Size = UDim2.new(1, 0, 0, 13), ZIndex = 4, Parent = card })
+    local sub = new("TextLabel", { Text = "PREMIUM · v14.2", Font = Enum.Font.GothamBold, TextSize = 9, TextColor3 = accent, TextTransparency = 1, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 93), Size = UDim2.new(1, 0, 0, 13), ZIndex = 4, Parent = card })
 
     local stepLabel = new("TextLabel", { Text = "Iniciando", Font = Enum.Font.GothamMedium, TextSize = 11, TextColor3 = Color3.fromRGB(150, 158, 184), TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Position = UDim2.fromOffset(22, 122), Size = UDim2.new(1, -100, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 4, Parent = card })
     local percentLabel = new("TextLabel", { Text = "0%", Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = accent, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Right, BackgroundTransparency = 1, Position = UDim2.new(1, -70, 0, 122), Size = UDim2.fromOffset(48, 14), ZIndex = 4, Parent = card })
@@ -451,7 +458,7 @@ if not isKeyVerified then
     local keyGui = new("ScreenGui", { Name = "KeySystem", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 1000, Parent = playerGui })
     local kf = new("Frame", { Size = UDim2.fromOffset(340, 268), Position = UDim2.new(0.5, -170, 0.5, -134), BackgroundColor3 = THEME.bg, BorderSizePixel = 0, Parent = keyGui }, { corner(18), new("UIStroke", { Color = THEME.accent, Thickness = 1.5, Transparency = 0.3 }) })
     new("TextLabel", { Text = "CASPER HUB", Font = Enum.Font.GothamBlack, TextSize = 25, TextColor3 = THEME.text, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 30), Size = UDim2.new(1, 0, 0, 34), Parent = kf })
-    new("TextLabel", { Text = "PREMIUM · v14", Font = Enum.Font.GothamBlack, TextSize = 11, TextColor3 = THEME.accent, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 64), Size = UDim2.new(1, 0, 0, 16), Parent = kf })
+    new("TextLabel", { Text = "PREMIUM · v14.2", Font = Enum.Font.GothamBlack, TextSize = 11, TextColor3 = THEME.accent, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 64), Size = UDim2.new(1, 0, 0, 16), Parent = kf })
     new("TextLabel", { Text = "Introduce tu key de acceso", Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = THEME.subtext, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 92), Size = UDim2.new(1, 0, 0, 18), Parent = kf })
     local tb = new("TextBox", { Text = "", PlaceholderText = "CASPER-XXXX", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = THEME.text, BackgroundColor3 = THEME.item, BorderSizePixel = 0, Position = UDim2.fromOffset(24, 124), Size = UDim2.new(1, -48, 0, 42), Parent = kf, ClearTextOnFocus = false }, { corner(10), new("UIStroke", { Color = Color3.fromRGB(50, 50, 70), Thickness = 1, Transparency = 0.3 }) })
     local sl = new("TextLabel", { Text = "", Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Color3.fromRGB(255, 90, 90), BackgroundTransparency = 1, Position = UDim2.fromOffset(24, 174), Size = UDim2.new(1, -48, 0, 20), Parent = kf })
@@ -771,7 +778,7 @@ local function buildShell(S)
     ui.chipText = H.label(ui.chipHolder, "micro", "—", { Position = UDim2.fromOffset(19, 0), Size = UDim2.fromOffset(80, 20), TextColor3 = V.sub, ZIndex = 9 })
 
     local verBadge = new("Frame", { Size = UDim2.fromOffset(46, 18), Position = UDim2.fromOffset(186, 45), BackgroundColor3 = THEME.accent, BackgroundTransparency = 0.8, BorderSizePixel = 0, ZIndex = 8, Parent = header }, { corner(9) }); H.bindAccent(verBadge, "BackgroundColor3")
-    H.label(verBadge, "micro", "v14.1", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.new(1, 1, 1), ZIndex = 9 })
+    H.label(verBadge, "micro", "v14.2", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.new(1, 1, 1), ZIndex = 9 })
 
     local profile = new("Frame", { Size = UDim2.fromOffset(184, 40), Position = UDim2.new(1, -318, 0.5, -20), BackgroundColor3 = V.card, BackgroundTransparency = 0.45, BorderSizePixel = 0, ZIndex = 8, Parent = header }, { corner(20) })
     H.stroke(profile, V.strokeHi, 1, 0.5)
@@ -1047,7 +1054,7 @@ end
 local function buildRuntime(S)
     local H = S.H
     S.Farm = { Refilling = false, ReloadRejects = 0, ReloadSettleUntil = 0, BladesEmptyFor = 0, ActorSegments = nil, ActorReloads = nil, ActorActive = nil, SpearStuck = false, RecentlyRefilled = 0, LootBusy = false,
-        QuickReload = false, QuickFailed = 0, HoverPos = nil, QuickTries = 0, LockKind = nil, LockUntil = 0, LastRefillEnd = 0 }
+        QuickReload = false, QuickFailed = 0, HoverPos = nil, QuickTries = 0, LockKind = nil, LockUntil = 0, LastRefillEnd = 0, LastAttackError = nil }
     local Farm = S.Farm
     local RT = S.RT
     local VALID_KEYS = { W = true, A = true, S = true, D = true, L = true }
@@ -1180,7 +1187,7 @@ local function buildRuntime(S)
         if not post then return end
         local nape = napeOf(titan)
         if not nape then return end
-        if Config.MassiveAttack and root and (root.Position.Y - nape.Position.Y) > 50 then
+        if Config.MassiveAttack and root and (root.Position.Y - nape.Position.Y) > 45 then
             local list = napesAround(titan, Config.HitCount)
             pcall(function()
                 post:FireServer("Attacks", "Slash", true)
@@ -2340,29 +2347,68 @@ local function buildRuntime(S)
 
     -- ==================== LOOPS ====================
     -- Mientras se recarga, el personaje queda fijo en el aire.
+    -- === PATCH v14.2: hover por velocidad, altitud retenida, ataque no bloqueante ===
+    local STANDOFF_MIN, STANDOFF_MAX = 60, 200
+    local ATTACK_GAP, ATTACK_GAP_DIST, NAPE_PUSH = 0.16, 4, 35
+
     RT.farmLoop = function()
         task.wait(3)
+        local lastAttack, lastY, lastRoot, attacking = 0, nil, nil, false
         while S.ui.gui and S.ui.gui.Parent do
-            local dt = RunService.Heartbeat:Wait()
-            local busy = RT.refillBusy()
-            if busy and Farm.HoverPos then
+            local dt = math.max(RunService.Heartbeat:Wait(), 1e-3)
+
+            if RT.refillBusy() then
                 local root = getRoot()
-                if root then
+                if root and Farm.HoverPos then
                     root.CFrame = Farm.HoverPos
                     pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
                 end
-            elseif Config.AutoFarm and not busy and not Farm.LootBusy then
-                local root = getRoot(); local titan = getTitan()
-                if root and titan then
-                    local nape = napeOf(titan)
+            elseif Config.AutoFarm and not Farm.LootBusy then
+                local root = getRoot()
+                if root then
+                    if root ~= lastRoot then lastRoot, lastY = root, nil end
+                    local titan = getTitan()
+                    local nape = titan and napeOf(titan)
+                    local speed = tonumber(Config.FlySpeed) or 600
+                    local standoff = math.clamp(tonumber(Config.FlyHeight) or 120, STANDOFF_MIN, STANDOFF_MAX)
+                    local targetPos
+
                     if nape then
-                        local targetPos = nape.Position + Vector3.new(0, Config.FlyHeight, 0)
-                        if (targetPos - root.Position).Magnitude > 6 then
-                            local dir = (targetPos - root.Position).Unit
-                            root.CFrame = root.CFrame + dir * (Config.FlySpeed * dt)
+                        targetPos = nape.Position + Vector3.new(0, standoff, 0)
+                        lastY = targetPos.Y
+                    else
+                        -- sin titán: retener altitud, nunca desplomarse
+                        targetPos = Vector3.new(root.Position.X, lastY or root.Position.Y, root.Position.Z)
+                    end
+
+                    local diff = targetPos - root.Position
+                    local dist = diff.Magnitude
+
+                    if nape and dist <= standoff + 8 then
+                        if dist > ATTACK_GAP_DIST then
+                            root.AssemblyLinearVelocity = diff.Unit * math.min(speed, dist / dt)
                         else
-                            attackTitan(titan, root)
-                            task.wait(0.15)
+                            -- empuje mínimo hacia la nuca: velocidad nunca 0, el daño escala y el registro entra
+                            local toNape = nape.Position - root.Position
+                            root.AssemblyLinearVelocity = toNape.Magnitude > 1e-3
+                                and toNape.Unit * NAPE_PUSH
+                                or Vector3.new(0, -NAPE_PUSH, 0)
+                        end
+                        if not attacking and os.clock() - lastAttack >= ATTACK_GAP then
+                            lastAttack = os.clock()
+                            attacking = true
+                            task.spawn(function()
+                                local okA, errA = pcall(attackTitan, titan, root)
+                                attacking = false
+                                if not okA then Farm.LastAttackError = tostring(errA) end
+                            end)
+                        end
+                    else
+                        -- fuera de rango: acercarse por velocidad, no por CFrame
+                        if dist > 0.6 then
+                            root.AssemblyLinearVelocity = diff.Unit * math.min(speed, dist / dt)
+                        else
+                            root.AssemblyLinearVelocity = Vector3.zero
                         end
                     end
                 end
@@ -3051,7 +3097,8 @@ local function buildTabs(S)
             markKey(key)
             local f = row(62)
             rowLabel(f, text, UDim2.new(1, -78, 0, 26))
-            local current = tonumber(Config[key]) or min
+            local current = math.clamp(tonumber(Config[key]) or min, min, max)
+            Config[key] = current
             local valueLabel = new("TextLabel", { Text = tostring(current), Font = S.TYPO.micro.font, TextSize = S.TYPO.micro.size, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Center, BackgroundColor3 = THEME.accent, BackgroundTransparency = 0.15, Position = UDim2.new(1, -68, 0, 4), Size = UDim2.fromOffset(56, 20), ZIndex = 10, Parent = f }, { corner(6) }); H.bindAccent(valueLabel, "BackgroundColor3")
             local bar = new("Frame", { Size = UDim2.new(1, -26, 0, 6), Position = UDim2.new(0, 13, 0, 42), BackgroundColor3 = V.track, BorderSizePixel = 0, ZIndex = 10, Parent = f }, { corner(3) })
             local alpha0 = (current - min) / math.max(max - min, 0.001)
@@ -3320,6 +3367,7 @@ local function buildTabs(S)
     end)
 
     S.addTab("Farm", "Combate", "farm", "Automatización y combate", function(api)
+        Config.FlyHeight = math.clamp(tonumber(Config.FlyHeight) or 120, 60, 200)
         api.Section("Automatización")
         api.Toggle("Auto Farm", "AutoFarm", function(s)
             if s and Config.AutoClearWave then
@@ -3331,7 +3379,8 @@ local function buildTabs(S)
         api.Toggle("Auto Skill", "AutoSkill", function(s) S.notify("Auto Skill", s and "Activado" or "Desactivado", 2) end, { requires = "game", tip = "Pulsa las skills 1-5 en bucle" })
         api.Section("Ajustes de vuelo")
         api.Slider("Velocidad", 100, 1500, "FlySpeed")
-        api.Slider("Altura", 50, 500, "FlyHeight")
+        api.Slider("Distancia de ataque", 60, 200, "FlyHeight")
+        api.Label("Mantén 100-140. Por encima de 180 vuelves al borde del radio de validación.", 30)
         api.Section("Combate")
         api.Toggle("Ataque Masivo Aéreo", "MassiveAttack", function(s) S.notify("Ataque Masivo", s and "Activado" or "Desactivado", 2) end, { requires = "game", tip = "Golpea varios titanes cercanos a la vez" })
         api.Slider("Daño Multiplicado", 1, 20, "DamageMult")
@@ -4054,8 +4103,8 @@ local function boot(S)
     if startTab then S.selectTab(startTab) end
     if S.syncMobile then S.syncMobile() end
 
-    S.notify("CASPER HUB PREMIUM v14.1", isMobile and "Interfaz lista · botón flotante para abrir" or ("Interfaz lista · " .. Config.Keybind), 4)
-    print("[CASPER HUB PREMIUM v14.1] Cargado con éxito.")
+    S.notify("CASPER HUB PREMIUM v14.2", isMobile and "Interfaz lista · botón flotante para abrir" or ("Interfaz lista · " .. Config.Keybind), 4)
+    print("[CASPER HUB PREMIUM v14.2] Cargado con éxito.")
 end
 
 -- ============================================================
