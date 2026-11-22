@@ -1,11 +1,19 @@
 --[[
-  CASPER HUB PREMIUM — v13.7
+  CASPER HUB PREMIUM — v13.9
   Móvil/PC + Delta/Xeno.
 
+  v13.9:
+   · toggle propio "Auto Reload R" (ON por defecto), sin pulsar R a mano
+   · el refill pasa a bloqueo con caducidad: nunca deja Clear Wave colgado
+   · watchdog que libera bloqueos viejos y reanuda solo
+  v13.8:
+   · la recarga rápida con R ahora también aplica a Auto Clear Wave
+   · Clear Wave se pausa y el personaje queda flotando mientras recarga
+   · dispara también con blades bajas (<=1) si hay repuestos
   v13.7:
    · fix blades trabadas: con repuestos disponibles se pausa el farm, se flota
      en el aire y se pulsa R hasta recargar; luego se reanuda solo
-   v13.6:
+  v13.6:
    · Auto Loot Crate (recoge tu caja Crate_<tu nombre> con noclip y vuelve al drop)
    · pausa Auto Farm / Clear Wave mientras lootea y los reanuda después
   v13.5:
@@ -57,7 +65,7 @@ CheckSavedKey()
 local Config = {
     AutoFarm = false, FlySpeed = 600, FlyHeight = 230, AutoSkill = false,
     AutoEscape = false, EscapeCooldownX100 = 15, EscapeMinSize = 20, DebugEscape = false,
-    AutoRefillBlade = false, AutoRefillThunder = false, AutoRefillWave = false,
+    AutoRefillBlade = false, AutoRefillThunder = false, AutoRefillWave = false, AutoReloadR = true,
     RefillCooldown = 5, RefillSpeed = 800, WaveSpeed = 1000,
     DamageMult = 10, HitCount = 5, AutoRetry = false, MassiveAttack = false,
     AutoCreateWave = false, AutoStartWave = false, AutoReady = false,
@@ -347,12 +355,13 @@ local function pushLog(title, message)
 end
 
 local CHANGELOG = {
+    "13.9 · Auto Reload R propio + bloqueo de refill con caducidad y watchdog",
+    "13.8 · recarga con R también en Clear Wave, con pausa y flotado",
     "13.7 · fix blades trabadas: pausa el farm, flota y recarga con R",
     "13.6 · Auto Loot Crate con noclip, pausa y reanuda el farm",
     "13.5 · sección Wave completa, anti-choque Wave/Raid y Clear Wave/Auto Farm",
     "13.4 · pantalla de carga por etapas, watchdog y arranque escalonado",
     "13.3 · layout colapsado inicial, hitbox de sliders, escala sincronizada",
-    "13.2 · compatibilidad móvil/PC, Delta y Xeno, sizing adaptativo",
 }
 
 -- ============================================================
@@ -376,7 +385,7 @@ local function buildLoader()
     local monogram = new("TextLabel", { Text = "C", Font = Enum.Font.GothamBlack, TextSize = 19, TextColor3 = Color3.new(1, 1, 1), TextTransparency = 1, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 5, Parent = logo })
 
     local title = new("TextLabel", { Text = "CASPER HUB", Font = Enum.Font.GothamBlack, TextSize = 17, TextColor3 = Color3.fromRGB(245, 247, 255), TextTransparency = 1, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 74), Size = UDim2.new(1, 0, 0, 20), ZIndex = 4, Parent = card })
-    local sub = new("TextLabel", { Text = "PREMIUM · v13.7", Font = Enum.Font.GothamBold, TextSize = 9, TextColor3 = accent, TextTransparency = 1, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 93), Size = UDim2.new(1, 0, 0, 13), ZIndex = 4, Parent = card })
+    local sub = new("TextLabel", { Text = "PREMIUM · v13.9", Font = Enum.Font.GothamBold, TextSize = 9, TextColor3 = accent, TextTransparency = 1, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 93), Size = UDim2.new(1, 0, 0, 13), ZIndex = 4, Parent = card })
 
     local stepLabel = new("TextLabel", { Text = "Iniciando", Font = Enum.Font.GothamMedium, TextSize = 11, TextColor3 = Color3.fromRGB(150, 158, 184), TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Position = UDim2.fromOffset(22, 122), Size = UDim2.new(1, -100, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 4, Parent = card })
     local percentLabel = new("TextLabel", { Text = "0%", Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = accent, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Right, BackgroundTransparency = 1, Position = UDim2.new(1, -70, 0, 122), Size = UDim2.fromOffset(48, 14), ZIndex = 4, Parent = card })
@@ -756,7 +765,7 @@ local function buildShell(S)
     ui.chipText = H.label(ui.chipHolder, "micro", "—", { Position = UDim2.fromOffset(19, 0), Size = UDim2.fromOffset(80, 20), TextColor3 = V.sub, ZIndex = 9 })
 
     local verBadge = new("Frame", { Size = UDim2.fromOffset(46, 18), Position = UDim2.fromOffset(186, 45), BackgroundColor3 = THEME.accent, BackgroundTransparency = 0.8, BorderSizePixel = 0, ZIndex = 8, Parent = header }, { corner(9) }); H.bindAccent(verBadge, "BackgroundColor3")
-    H.label(verBadge, "micro", "v13.7", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.new(1, 1, 1), ZIndex = 9 })
+    H.label(verBadge, "micro", "v13.9", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.new(1, 1, 1), ZIndex = 9 })
 
     local profile = new("Frame", { Size = UDim2.fromOffset(184, 40), Position = UDim2.new(1, -318, 0.5, -20), BackgroundColor3 = V.card, BackgroundTransparency = 0.45, BorderSizePixel = 0, ZIndex = 8, Parent = header }, { corner(20) })
     H.stroke(profile, V.strokeHi, 1, 0.5)
@@ -1032,7 +1041,7 @@ end
 local function buildRuntime(S)
     local H = S.H
     S.Farm = { Refilling = false, ReloadRejects = 0, ReloadSettleUntil = 0, BladesEmptyFor = 0, ActorSegments = nil, ActorReloads = nil, ActorActive = nil, SpearStuck = false, RecentlyRefilled = 0, LootBusy = false,
-        QuickReload = false, QuickFailed = 0, HoverPos = nil }
+        QuickReload = false, QuickFailed = 0, HoverPos = nil, QuickTries = 0, LockKind = nil, LockUntil = 0, LastRefillEnd = 0 }
     local Farm = S.Farm
     local RT = S.RT
     local VALID_KEYS = { W = true, A = true, S = true, D = true, L = true }
@@ -1270,14 +1279,26 @@ local function buildRuntime(S)
         return true
     end
 
-    RT.bladesEmpty = function()
-        if allBroken() then return true end
+    RT.bladeCount = function()
         local seg = Farm.ActorSegments and Farm.ActorSegments()
         if seg == nil then
             local raw = player:GetAttribute("SH_Segments")
             seg = raw and tonumber(raw) or nil
         end
+        return seg
+    end
+
+    RT.bladesEmpty = function()
+        if allBroken() then return true end
+        local seg = RT.bladeCount()
         return seg ~= nil and seg <= 0
+    end
+
+    -- blades agotadas o a punto de agotarse (1 segmento)
+    RT.bladesLow = function()
+        if RT.bladesEmpty() then return true end
+        local n = RT.bladeCount()
+        return n ~= nil and n <= 1
     end
 
     RT.spearsLeft = function()
@@ -1456,7 +1477,7 @@ local function buildRuntime(S)
             while S.ui.gui and S.ui.gui.Parent and Alive() do
                 task.wait(0.25)
                 pcall(function()
-                    player:SetAttribute("SH_AutoReload", (Config.AutoRefillBlade or Config.AutoRefillThunder) and CanUseHere() and true or false)
+                    player:SetAttribute("SH_AutoReload", (Config.AutoReloadR or Config.AutoRefillBlade or Config.AutoRefillThunder) and CanUseHere() and true or false)
                 end)
             end
             pcall(function()
@@ -1473,23 +1494,55 @@ local function buildRuntime(S)
         Farm.ReloadSettleUntil = os.clock() + 3
     end
 
-    -- Parche blades trabadas: pausa el farm, se queda flotando y pulsa R
+    -- Bloqueo de refill con caducidad: evita que un flag se quede pegado
+    -- y deje Clear Wave / Farm congelados para siempre.
+    RT.lockRefill = function(kind, secs)
+        Farm.LockKind = kind or "refill"
+        Farm.LockUntil = os.clock() + (secs or 25)
+        Farm.Refilling = true
+        isRefilling = true
+    end
+    RT.unlockRefill = function()
+        Farm.LockKind = nil
+        Farm.LockUntil = 0
+        Farm.Refilling = false
+        isRefilling = false
+        Farm.QuickReload = false
+        Farm.HoverPos = nil
+        Farm.QuickTries = 0
+        Farm.LastRefillEnd = os.clock()
+    end
+    -- true solo si hay bloqueo vigente; si caducó, lo limpia y devuelve false
+    RT.refillBusy = function()
+        if not Farm.LockKind then return false end
+        if os.clock() <= (Farm.LockUntil or 0) then return true end
+        local kind = tostring(Farm.LockKind)
+        RT.unlockRefill()
+        if S.notify then S.notify("Refill", "Bloqueo caducado (" .. kind .. "), liberado", 2) end
+        return false
+    end
+
+    -- Parche blades trabadas: pausa farm / clear wave, flota y pulsa R solo.
     local QUICK_TRIES = 3
     local function quickBladeReload()
         local root = getRoot()
         if not root then return false end
+        RT.lockRefill("quick", 2 + QUICK_TRIES * 2.4)
         Farm.QuickReload = true
+        Farm.QuickTries = 0
         Farm.HoverPos = root.CFrame
         local ok = false
         pcall(function()
             for _ = 1, QUICK_TRIES do
+                if not Alive() then break end
                 local r = getRoot()
                 if not r then break end
+                Farm.QuickTries += 1
                 Farm.HoverPos = r.CFrame
                 RT.pressKey(Enum.KeyCode.R, 0.08)
                 local t0 = os.clock()
                 while os.clock() - t0 < 1.6 do
-                    if not RT.bladesEmpty() then ok = true break end
+                    if not RT.bladesLow() then ok = true break end
                     if not Alive() then break end
                     task.wait(0.1)
                 end
@@ -1497,8 +1550,7 @@ local function buildRuntime(S)
                 task.wait(0.35)
             end
         end)
-        Farm.QuickReload = false
-        Farm.HoverPos = nil
+        RT.unlockRefill()
         if ok then
             Farm.QuickFailed = 0
             markRefilled()
@@ -1534,11 +1586,10 @@ local function buildRuntime(S)
             local station = nearestStation(root)
             if not station then break end
             pcall(function() post:FireServer("Attacks", "Reload", station) end)
-            if waitDone(2.5) then Farm.Refilling = false markRefilled() return true end
+            if waitDone(2.5) then markRefilled() return true end
             local prompt = promptOf(station)
             local back = root.CFrame
             local pos = promptPos(prompt, station)
-            Farm.Refilling = true
             if pos then
                 tweenToPos(root, pos + Vector3.new(0, 3, 0), Config.RefillSpeed)
                 task.wait(0.3)
@@ -1549,11 +1600,9 @@ local function buildRuntime(S)
             local okWait = waitDone(CHECK_WAIT)
             local r = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
             if r and back then tweenToPos(r, back.Position, Config.RefillSpeed) end
-            Farm.Refilling = false
             if okWait then markRefilled() return true end
             Farm.ReloadRejects = (Farm.ReloadRejects or 0) + 1
         end
-        Farm.Refilling = false
         return false
     end
 
@@ -1595,7 +1644,7 @@ local function buildRuntime(S)
             pcall(function() post:FireServer("Attacks", "Reload", station) end)
             local t0 = os.clock()
             while os.clock() - t0 < 2.5 do
-                if done() then Farm.Refilling = false markRefilled() return true end
+                if done() then markRefilled() return true end
                 if not Alive() then return false end
                 task.wait(0.2)
             end
@@ -1610,7 +1659,6 @@ local function buildRuntime(S)
             root = char and char:FindFirstChild("HumanoidRootPart")
             if not (root and hum and hum.Health > 0) then break end
             local back = root.CFrame
-            Farm.Refilling = true
             tweenToPos(root, pos + Vector3.new(0, 3, 0), Config.WaveSpeed)
             task.wait(0.2)
             local countBefore = promptCount(prompt)
@@ -1631,10 +1679,8 @@ local function buildRuntime(S)
             end
             local r = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
             if r and back then tweenToPos(r, back.Position, Config.WaveSpeed) end
-            Farm.Refilling = false
             if not still then success = true break end
         end
-        Farm.Refilling = false
         if success then markRefilled() end
         return success
     end
@@ -2021,7 +2067,12 @@ local function buildRuntime(S)
                 end
                 if not CanUseHere() then setClear("Esperando partida") return end
                 if Farm.LootBusy then setClear("Pausado (caja)") return end
-                if Farm.Refilling or isRefilling then setClear("Pausado (refill)") return end
+                -- refillBusy caduca solo: nunca deja esto pegado
+                if Farm.LockKind == "quick" and RT.refillBusy() then
+                    setClear(("Recargando blades con R (%d/%d)"):format(Farm.QuickTries or 0, QUICK_TRIES))
+                    return
+                end
+                if RT.refillBusy() then setClear("Pausado (recarga)") return end
                 local root = getRoot()
                 if not root then setClear("Esperando personaje") return end
                 local range = math.clamp(tonumber(Config.ClearWaveRange) or 300, 50, 2000)
@@ -2268,8 +2319,8 @@ local function buildRuntime(S)
                     anyCrate = nil
                 end
                 local crate = (anyCrate and os.clock() > crateCooldown) and anyCrate or nil
-                if crate and Farm.Refilling then
-                    lootStatus("Caja lista. Esperando refill...")
+                if crate and RT.refillBusy() then
+                    lootStatus("Caja lista. Esperando recarga...")
                 elseif crate then
                     Farm.LootBusy = true
                     pcall(lootCycle, crate)
@@ -2288,17 +2339,19 @@ local function buildRuntime(S)
     end
 
     -- ==================== LOOPS ====================
+    -- Mientras se recarga, el personaje queda fijo en el aire.
     RT.farmLoop = function()
         task.wait(3)
         while S.ui.gui and S.ui.gui.Parent do
             local dt = RunService.Heartbeat:Wait()
-            if Farm.QuickReload and Farm.HoverPos then
+            local busy = RT.refillBusy()
+            if busy and Farm.HoverPos then
                 local root = getRoot()
                 if root then
                     root.CFrame = Farm.HoverPos
                     pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
                 end
-            elseif Config.AutoFarm and not isRefilling and not Farm.LootBusy then
+            elseif Config.AutoFarm and not busy and not Farm.LootBusy then
                 local root = getRoot(); local titan = getTitan()
                 if root and titan then
                     local nape = napeOf(titan)
@@ -2394,19 +2447,17 @@ local function buildRuntime(S)
         while S.ui.gui and S.ui.gui.Parent do
             task.wait(0.4)
             local ok, err = pcall(function()
-                local isWaveMode = Config.AutoRefillWave and waveFolder() ~= nil
-                -- Blades rotas con repuestos: pausa el farm y recarga con R en el aire
-                if not isWaveMode and Config.AutoRefillBlade and CanUseHere() and not Farm.LootBusy
-                    and not Farm.QuickReload and not Farm.Refilling
-                    and os.clock() >= (Farm.QuickFailed or 0) and RT.bladesEmpty() then
+                -- Recarga automática con R: no hace falta pulsar nada.
+                -- Solo si quedan repuestos; si no, va a la estación.
+                if (Config.AutoReloadR or Config.AutoRefillBlade) and CanUseHere() and not Farm.LootBusy
+                    and not RT.refillBusy()
+                    and os.clock() >= (Farm.QuickFailed or 0) and RT.bladesLow() then
                     local sp = spareLeft()
                     local quick = (sp ~= nil and sp > 0) or (sp == nil and (Farm.BladesEmptyFor or 0) >= 1.5)
                     if quick then
                         local wait = math.max(1.2, (tonumber(Config.RefillCooldown) or 5) * 0.5)
                         if os.clock() - lastRefill >= wait then
-                            Farm.Refilling = true; isRefilling = true
                             local okQ = quickBladeReload()
-                            Farm.Refilling = false; isRefilling = false
                             lastRefill = os.clock()
                             since = nil
                             if not okQ then Farm.QuickFailed = os.clock() + 20 end
@@ -2414,11 +2465,12 @@ local function buildRuntime(S)
                         end
                     end
                 end
+                if RT.refillBusy() then since = nil return end
+                local isWaveMode = Config.AutoRefillWave and waveFolder() ~= nil
                 local needs = needBlade() or needThunder()
                 if isWaveMode then since = nil return end
                 if not (CanUseHere() and needs) then
                     since = nil
-                    if Farm.Refilling and not isRefilling then Farm.Refilling = false end
                     return
                 end
                 since = since or os.clock()
@@ -2430,14 +2482,14 @@ local function buildRuntime(S)
                     since = nil
                     return
                 end
-                Farm.Refilling = true; isRefilling = true
+                RT.lockRefill("station", 45)
                 local okRefill = doRefill()
-                Farm.Refilling = false; isRefilling = false
+                RT.unlockRefill()
                 lastRefill = os.clock() - (okRefill and 0 or (Config.RefillCooldown - 3))
                 since = nil
             end)
             if not ok then
-                Farm.Refilling = false; isRefilling = false
+                RT.unlockRefill()
                 lastRefill = os.clock() - Config.RefillCooldown + 3
                 warn("[Casper][Refill] error:", err)
                 task.wait(1)
@@ -2453,13 +2505,14 @@ local function buildRuntime(S)
             local ok, err = pcall(function()
                 if not (Config.AutoRefillWave and waveFolder()) then since = nil failStreak = 0 return end
                 if not CanUseHere() then since = nil return end
+                if RT.refillBusy() then return end
                 if not waveNeed() then since = nil failStreak = 0 return end
                 since = since or os.clock()
                 if os.clock() - since < 1.0 then return end
                 if os.clock() - lastWave < 10 then return end
-                Farm.Refilling = true; isRefilling = true
+                RT.lockRefill("wave", 45)
                 local okW = doWaveRefill()
-                Farm.Refilling = false; isRefilling = false
+                RT.unlockRefill()
                 if okW then
                     failStreak = 0; lastWave = os.clock(); since = nil
                 else
@@ -2470,7 +2523,7 @@ local function buildRuntime(S)
                 end
             end)
             if not ok then
-                Farm.Refilling = false; isRefilling = false
+                RT.unlockRefill()
                 lastWave = os.clock() - 7
                 warn("[Casper][WaveRefill] error:", err)
                 task.wait(1)
@@ -2496,6 +2549,10 @@ local function buildRuntime(S)
             end
             wasEmpty = empty
             if os.clock() % 1 < 0.1 then
+                -- watchdog de bloqueos: si algo se quedó pegado, lo libera
+                if Farm.LockKind and os.clock() > (Farm.LockUntil or 0) then
+                    pcall(RT.refillBusy)
+                end
                 local n = RT.spearsLeft()
                 local recently = os.clock() < (Farm.RecentlyRefilled or 0)
                 if n == nil then
@@ -2503,7 +2560,7 @@ local function buildRuntime(S)
                 elseif n <= 0 then
                     Farm.SpearStuck = true; lastSpears = n; stuck = 0
                 else
-                    if Config.AutoFarm and lastSpears == n and not recently then
+                    if (Config.AutoFarm or Config.AutoClearWave) and lastSpears == n and not recently then
                         stuck += 1
                         Farm.SpearStuck = stuck >= 8
                     else
@@ -2754,12 +2811,13 @@ local function buildRuntime(S)
     end
     RT.panic = function()
         setFlags({})
+        RT.unlockRefill()
         S.notify("Pánico", "Todas las features apagadas", 2)
     end
     S.PRESETS = {
         { name = "Farm AFK", tip = "Farm, skill y refill automático", flags = { AutoFarm = true, AutoSkill = true, AutoRefillBlade = true, AutoRefillThunder = true, AutoEscape = true } },
-        { name = "Wave grind", tip = "Refill de oleada + farm", flags = { AutoRefillWave = true, AutoFarm = true, AutoSkill = true, AutoEscape = true } },
-        { name = "Wave auto", tip = "Crea, inicia, limpia y lootea solo", flags = { AutoPlay = true, AutoCreateWave = true, AutoStartWave = true, AutoReady = true, AutoVoteSkip = true, AutoClearWave = true, AutoLootCrate = true } },
+        { name = "Wave grind", tip = "Refill de oleada + farm", flags = { AutoRefillWave = true, AutoFarm = true, AutoSkill = true, AutoEscape = true, AutoRefillBlade = true } },
+        { name = "Wave auto", tip = "Crea, inicia, limpia y lootea solo", flags = { AutoPlay = true, AutoCreateWave = true, AutoStartWave = true, AutoReady = true, AutoVoteSkip = true, AutoClearWave = true, AutoLootCrate = true, AutoRefillBlade = true } },
         { name = "Raid solo", tip = "Prepara raid con skips y cofres", flags = { AutoSkipCutscene = true, AutoCannon = true, AutoOpenChestFree = true, AutoFinishChest = true } },
         { name = "Limpio", tip = "Apaga todo", flags = {} },
     }
@@ -3437,8 +3495,11 @@ local function buildTabs(S)
     end)
 
     S.addTab("Refill", "Utilidad", "refill", "Relleno de equipo", function(api)
-        api.Section("Relleno automático")
-        api.Toggle("Auto Refill Blades", "AutoRefillBlade", function(s) S.notify("Refill Blades", s and "Activado" or "Desactivado", 2) end, { requires = "game" })
+        api.Section("Recarga de blades")
+        api.Toggle("Auto Reload R", "AutoReloadR", function(s)
+            S.notify("Auto Reload R", s and "ON (pulsa R solo)" or "OFF", 2)
+        end, { requires = "game", tip = "Pulsa R automáticamente cuando te quedas sin blades con repuestos" })
+        api.Toggle("Auto Refill Blades", "AutoRefillBlade", function(s) S.notify("Refill Blades", s and "Activado" or "Desactivado", 2) end, { requires = "game", tip = "Recarga con R en el aire y, sin repuestos, va a la estación" })
         api.Toggle("Auto Refill Thunder", "AutoRefillThunder", function(s) S.notify("Refill Thunder", s and "Activado" or "Desactivado", 2) end, { requires = "game" })
         api.Section("Ajustes")
         api.Slider("Cooldown refill", 1, 30, "RefillCooldown")
@@ -3455,13 +3516,19 @@ local function buildTabs(S)
             end
         end)
         api.Section("Diagnóstico")
+        api.Button("Liberar bloqueo de refill", function()
+            RT.unlockRefill()
+            S.notify("Refill", "Bloqueo liberado a mano", 2)
+        end)
         api.Button("Volcar estado del refill", function()
             local seg = S.Farm.ActorSegments and S.Farm.ActorSegments()
             local rel = S.Farm.ActorReloads and S.Farm.ActorReloads()
             S.notify("Refill Debug",
                 "Seg: " .. tostring(seg) .. " · Rel: " .. tostring(rel) ..
                 " · Refills: " .. tostring(RT.refillsLeft() or "?") ..
-                " · Refilling: " .. tostring(S.Farm.Refilling) ..
+                " · Lock: " .. tostring(S.Farm.LockKind) ..
+                " · Quedan: " .. string.format("%.1f", (S.Farm.LockUntil or 0) - os.clock()) ..
+                " · Quick: " .. tostring(S.Farm.QuickReload) ..
                 " · SpearStuck: " .. tostring(S.Farm.SpearStuck), 8)
         end)
     end)
@@ -3568,6 +3635,7 @@ local function buildTabs(S)
                 "segments=" .. tostring(S.Farm.ActorSegments and S.Farm.ActorSegments()),
                 "reloads=" .. tostring(S.Farm.ActorReloads and S.Farm.ActorReloads()),
                 "refills=" .. tostring(RT.refillsLeft()),
+                "lock=" .. tostring(S.Farm.LockKind),
                 "error=" .. tostring(S.lastError),
             }, "\n")
             if type(setclipboard) == "function" then
@@ -3857,7 +3925,7 @@ local function boot(S)
             local on = false
             if t.name == "Farm" then on = Config.AutoFarm or Config.AutoSkill
             elseif t.name == "Wave" then on = Config.AutoCreateWave or Config.AutoStartWave or Config.AutoClearWave or Config.AutoLeaveAtWave or Config.AutoReady or Config.AutoVoteSkip or Config.AutoLootCrate
-            elseif t.name == "Refill" then on = Config.AutoRefillBlade or Config.AutoRefillThunder
+            elseif t.name == "Refill" then on = Config.AutoRefillBlade or Config.AutoRefillThunder or Config.AutoReloadR
             elseif t.name == "Escape" then on = Config.AutoEscape
             elseif t.name == "Auto Click" then on = Config.AutoRetry
             elseif t.name == "Raid" then on = Config.AutoCreateRaid or Config.AutoStartRaid or Config.AutoCannon or Config.AutoSkipCutscene end
@@ -3945,8 +4013,8 @@ local function boot(S)
     if startTab then S.selectTab(startTab) end
     if S.syncMobile then S.syncMobile() end
 
-    S.notify("CASPER HUB PREMIUM v13.7", isMobile and "Interfaz lista · botón flotante para abrir" or ("Interfaz lista · " .. Config.Keybind), 4)
-    print("[CASPER HUB PREMIUM v13.7] Cargado con éxito.")
+    S.notify("CASPER HUB PREMIUM v13.9", isMobile and "Interfaz lista · botón flotante para abrir" or ("Interfaz lista · " .. Config.Keybind), 4)
+    print("[CASPER HUB PREMIUM v13.9] Cargado con éxito.")
 end
 
 -- ============================================================
