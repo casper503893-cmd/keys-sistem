@@ -1,7 +1,13 @@
 --[[
-  CASPER HUB PREMIUM — v13.9
+  CASPER HUB PREMIUM — v14.1
   Móvil/PC + Delta/Xeno.
 
+  v14.1:
+   · hotkey para Auto Clear Wave en Ajustes
+  v14.0:
+   · recarga automática al llegar a 0 blades: pausa total y R solo
+   · Auto Skill también se detiene mientras recarga
+   · tecla del menú configurable (dropdown + capturador de tecla)
   v13.9:
    · toggle propio "Auto Reload R" (ON por defecto), sin pulsar R a mano
    · el refill pasa a bloqueo con caducidad: nunca deja Clear Wave colgado
@@ -355,13 +361,13 @@ local function pushLog(title, message)
 end
 
 local CHANGELOG = {
+    "14.1 · hotkey para Auto Clear Wave",
+    "14.0 · recarga automática a 0 blades con pausa total y tecla de menú elegible",
     "13.9 · Auto Reload R propio + bloqueo de refill con caducidad y watchdog",
     "13.8 · recarga con R también en Clear Wave, con pausa y flotado",
     "13.7 · fix blades trabadas: pausa el farm, flota y recarga con R",
     "13.6 · Auto Loot Crate con noclip, pausa y reanuda el farm",
     "13.5 · sección Wave completa, anti-choque Wave/Raid y Clear Wave/Auto Farm",
-    "13.4 · pantalla de carga por etapas, watchdog y arranque escalonado",
-    "13.3 · layout colapsado inicial, hitbox de sliders, escala sincronizada",
 }
 
 -- ============================================================
@@ -385,7 +391,7 @@ local function buildLoader()
     local monogram = new("TextLabel", { Text = "C", Font = Enum.Font.GothamBlack, TextSize = 19, TextColor3 = Color3.new(1, 1, 1), TextTransparency = 1, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 5, Parent = logo })
 
     local title = new("TextLabel", { Text = "CASPER HUB", Font = Enum.Font.GothamBlack, TextSize = 17, TextColor3 = Color3.fromRGB(245, 247, 255), TextTransparency = 1, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 74), Size = UDim2.new(1, 0, 0, 20), ZIndex = 4, Parent = card })
-    local sub = new("TextLabel", { Text = "PREMIUM · v13.9", Font = Enum.Font.GothamBold, TextSize = 9, TextColor3 = accent, TextTransparency = 1, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 93), Size = UDim2.new(1, 0, 0, 13), ZIndex = 4, Parent = card })
+    local sub = new("TextLabel", { Text = "PREMIUM · v14.1", Font = Enum.Font.GothamBold, TextSize = 9, TextColor3 = accent, TextTransparency = 1, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 93), Size = UDim2.new(1, 0, 0, 13), ZIndex = 4, Parent = card })
 
     local stepLabel = new("TextLabel", { Text = "Iniciando", Font = Enum.Font.GothamMedium, TextSize = 11, TextColor3 = Color3.fromRGB(150, 158, 184), TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Position = UDim2.fromOffset(22, 122), Size = UDim2.new(1, -100, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 4, Parent = card })
     local percentLabel = new("TextLabel", { Text = "0%", Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = accent, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Right, BackgroundTransparency = 1, Position = UDim2.new(1, -70, 0, 122), Size = UDim2.fromOffset(48, 14), ZIndex = 4, Parent = card })
@@ -445,7 +451,7 @@ if not isKeyVerified then
     local keyGui = new("ScreenGui", { Name = "KeySystem", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 1000, Parent = playerGui })
     local kf = new("Frame", { Size = UDim2.fromOffset(340, 268), Position = UDim2.new(0.5, -170, 0.5, -134), BackgroundColor3 = THEME.bg, BorderSizePixel = 0, Parent = keyGui }, { corner(18), new("UIStroke", { Color = THEME.accent, Thickness = 1.5, Transparency = 0.3 }) })
     new("TextLabel", { Text = "CASPER HUB", Font = Enum.Font.GothamBlack, TextSize = 25, TextColor3 = THEME.text, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 30), Size = UDim2.new(1, 0, 0, 34), Parent = kf })
-    new("TextLabel", { Text = "PREMIUM · v13", Font = Enum.Font.GothamBlack, TextSize = 11, TextColor3 = THEME.accent, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 64), Size = UDim2.new(1, 0, 0, 16), Parent = kf })
+    new("TextLabel", { Text = "PREMIUM · v14", Font = Enum.Font.GothamBlack, TextSize = 11, TextColor3 = THEME.accent, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 64), Size = UDim2.new(1, 0, 0, 16), Parent = kf })
     new("TextLabel", { Text = "Introduce tu key de acceso", Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = THEME.subtext, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 92), Size = UDim2.new(1, 0, 0, 18), Parent = kf })
     local tb = new("TextBox", { Text = "", PlaceholderText = "CASPER-XXXX", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = THEME.text, BackgroundColor3 = THEME.item, BorderSizePixel = 0, Position = UDim2.fromOffset(24, 124), Size = UDim2.new(1, -48, 0, 42), Parent = kf, ClearTextOnFocus = false }, { corner(10), new("UIStroke", { Color = Color3.fromRGB(50, 50, 70), Thickness = 1, Transparency = 0.3 }) })
     local sl = new("TextLabel", { Text = "", Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Color3.fromRGB(255, 90, 90), BackgroundTransparency = 1, Position = UDim2.fromOffset(24, 174), Size = UDim2.new(1, -48, 0, 20), Parent = kf })
@@ -765,7 +771,7 @@ local function buildShell(S)
     ui.chipText = H.label(ui.chipHolder, "micro", "—", { Position = UDim2.fromOffset(19, 0), Size = UDim2.fromOffset(80, 20), TextColor3 = V.sub, ZIndex = 9 })
 
     local verBadge = new("Frame", { Size = UDim2.fromOffset(46, 18), Position = UDim2.fromOffset(186, 45), BackgroundColor3 = THEME.accent, BackgroundTransparency = 0.8, BorderSizePixel = 0, ZIndex = 8, Parent = header }, { corner(9) }); H.bindAccent(verBadge, "BackgroundColor3")
-    H.label(verBadge, "micro", "v13.9", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.new(1, 1, 1), ZIndex = 9 })
+    H.label(verBadge, "micro", "v14.1", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.new(1, 1, 1), ZIndex = 9 })
 
     local profile = new("Frame", { Size = UDim2.fromOffset(184, 40), Position = UDim2.new(1, -318, 0.5, -20), BackgroundColor3 = V.card, BackgroundTransparency = 0.45, BorderSizePixel = 0, ZIndex = 8, Parent = header }, { corner(20) })
     H.stroke(profile, V.strokeHi, 1, 0.5)
@@ -1294,13 +1300,6 @@ local function buildRuntime(S)
         return seg ~= nil and seg <= 0
     end
 
-    -- blades agotadas o a punto de agotarse (1 segmento)
-    RT.bladesLow = function()
-        if RT.bladesEmpty() then return true end
-        local n = RT.bladeCount()
-        return n ~= nil and n <= 1
-    end
-
     RT.spearsLeft = function()
         local char = player.Character
         local n = char and char:GetAttribute("Spears")
@@ -1522,12 +1521,13 @@ local function buildRuntime(S)
         return false
     end
 
-    -- Parche blades trabadas: pausa farm / clear wave, flota y pulsa R solo.
-    local QUICK_TRIES = 3
+    -- Recarga con R: se llama al llegar a 0 blades con repuestos.
+    -- Pausa todo, fija al personaje en el aire y pulsa R hasta que entra.
+    local QUICK_TRIES = 4
     local function quickBladeReload()
         local root = getRoot()
         if not root then return false end
-        RT.lockRefill("quick", 2 + QUICK_TRIES * 2.4)
+        RT.lockRefill("quick", 2 + QUICK_TRIES * 2.2)
         Farm.QuickReload = true
         Farm.QuickTries = 0
         Farm.HoverPos = root.CFrame
@@ -1541,13 +1541,13 @@ local function buildRuntime(S)
                 Farm.HoverPos = r.CFrame
                 RT.pressKey(Enum.KeyCode.R, 0.08)
                 local t0 = os.clock()
-                while os.clock() - t0 < 1.6 do
-                    if not RT.bladesLow() then ok = true break end
+                while os.clock() - t0 < 1.4 do
+                    if not RT.bladesEmpty() then ok = true break end
                     if not Alive() then break end
                     task.wait(0.1)
                 end
                 if ok then break end
-                task.wait(0.35)
+                task.wait(0.3)
             end
         end)
         RT.unlockRefill()
@@ -2419,7 +2419,8 @@ local function buildRuntime(S)
         end
         while S.ui.gui and S.ui.gui.Parent do
             task.wait(1)
-            if Config.AutoSkill then
+            -- también se calla mientras se recarga
+            if Config.AutoSkill and not RT.refillBusy() then
                 if isMobile then
                     local btns = findSkillButtons()
                     if #btns > 0 then
@@ -2445,17 +2446,16 @@ local function buildRuntime(S)
         task.wait(3)
         local lastRefill, since = -999, nil
         while S.ui.gui and S.ui.gui.Parent do
-            task.wait(0.4)
+            task.wait(0.35)
             local ok, err = pcall(function()
-                -- Recarga automática con R: no hace falta pulsar nada.
-                -- Solo si quedan repuestos; si no, va a la estación.
+                -- Recarga automática al llegar a 0 blades con repuestos.
                 if (Config.AutoReloadR or Config.AutoRefillBlade) and CanUseHere() and not Farm.LootBusy
                     and not RT.refillBusy()
-                    and os.clock() >= (Farm.QuickFailed or 0) and RT.bladesLow() then
+                    and os.clock() >= (Farm.QuickFailed or 0) and RT.bladesEmpty() then
                     local sp = spareLeft()
-                    local quick = (sp ~= nil and sp > 0) or (sp == nil and (Farm.BladesEmptyFor or 0) >= 1.5)
+                    local quick = (sp ~= nil and sp > 0) or (sp == nil and (Farm.BladesEmptyFor or 0) >= 0.8)
                     if quick then
-                        local wait = math.max(1.2, (tonumber(Config.RefillCooldown) or 5) * 0.5)
+                        local wait = math.max(0.8, (tonumber(Config.RefillCooldown) or 5) * 0.4)
                         if os.clock() - lastRefill >= wait then
                             local okQ = quickBladeReload()
                             lastRefill = os.clock()
@@ -3498,8 +3498,8 @@ local function buildTabs(S)
         api.Section("Recarga de blades")
         api.Toggle("Auto Reload R", "AutoReloadR", function(s)
             S.notify("Auto Reload R", s and "ON (pulsa R solo)" or "OFF", 2)
-        end, { requires = "game", tip = "Pulsa R automáticamente cuando te quedas sin blades con repuestos" })
-        api.Toggle("Auto Refill Blades", "AutoRefillBlade", function(s) S.notify("Refill Blades", s and "Activado" or "Desactivado", 2) end, { requires = "game", tip = "Recarga con R en el aire y, sin repuestos, va a la estación" })
+        end, { requires = "game", tip = "Al quedarte a 0 blades con repuestos: pausa todo, flota y pulsa R solo" })
+        api.Toggle("Auto Refill Blades", "AutoRefillBlade", function(s) S.notify("Refill Blades", s and "Activado" or "Desactivado", 2) end, { requires = "game", tip = "Igual que el anterior y, sin repuestos, va a la estación" })
         api.Toggle("Auto Refill Thunder", "AutoRefillThunder", function(s) S.notify("Refill Thunder", s and "Activado" or "Desactivado", 2) end, { requires = "game" })
         api.Section("Ajustes")
         api.Slider("Cooldown refill", 1, 30, "RefillCooldown")
@@ -3636,6 +3636,7 @@ local function buildTabs(S)
                 "reloads=" .. tostring(S.Farm.ActorReloads and S.Farm.ActorReloads()),
                 "refills=" .. tostring(RT.refillsLeft()),
                 "lock=" .. tostring(S.Farm.LockKind),
+                "keybind=" .. tostring(Config.Keybind),
                 "error=" .. tostring(S.lastError),
             }, "\n")
             if type(setclipboard) == "function" then
@@ -3733,13 +3734,38 @@ local function buildTabs(S)
             SettingsStore.Write("AOTR", { Cfg = Config, SavedAt = os.time(), Account = player.Name })
             S.notify("Config", "Guardada en SmoothHub/" .. player.UserId .. "/AOTR.json", 3)
         end)
-        api.Label("Tecla de apertura: " .. Config.Keybind .. (isMobile and " · en móvil usa el botón flotante" or ""))
+
+        api.Section("Tecla del menú")
+        local keyLabel = api.Label("Actual: " .. Config.Keybind)
+        S.keybindLabel = keyLabel
+        local KEY_OPTIONS = {
+            "RightShift", "LeftShift", "RightControl", "LeftControl", "Insert", "Home", "End", "PageUp", "PageDown",
+            "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
+            "Z", "X", "C", "V", "B", "N", "M", "K", "J", "H", "G", "Y", "U", "P", "O", "I", "Q", "T", "R",
+        }
+        api.Dropdown("Tecla para abrir/cerrar", KEY_OPTIONS, "Keybind", function(option)
+            keyLabel.set("Actual: " .. option)
+            S.notify("Tecla", "Menú: " .. option, 2)
+        end)
+        api.Button("Capturar tecla (pulsa una)", function()
+            S.captureKey = true
+            S.notify("Tecla", "Pulsa la tecla que quieras usar", 4)
+        end)
+        api.Button("Volver a RightShift", function()
+            Config.Keybind = "RightShift"
+            EventBus:Emit("ConfigChanged", "Keybind", "RightShift")
+            keyLabel.set("Actual: RightShift")
+            S.notify("Tecla", "Menú: RightShift", 2)
+        end)
+        api.Label("Si eliges R, se solapará con la recarga de blades.")
+
         api.Section("Hotkeys de feature")
         local HOT_OPTIONS = { "—", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "Z", "X", "C", "V", "B", "G", "H", "J", "K", "L", "N", "M" }
         local HOT_FEATURES = {
             { key = "AutoFarm", name = "Auto Farm" },
             { key = "AutoSkill", name = "Auto Skill" },
             { key = "AutoEscape", name = "Auto Escape" },
+            { key = "AutoClearWave", name = "Auto Clear Wave" },
             { key = "AutoRefillBlade", name = "Blades" },
             { key = "AutoRefillThunder", name = "Thunder" },
             { key = "AutoRetry", name = "Auto Click" },
@@ -3761,6 +3787,7 @@ local function buildTabs(S)
             S.buildPage(tabByName["Ajustes"])
             S.notify("Hotkeys", "Borradas", 2)
         end)
+
         api.Section("Sesión")
         api.Button("Cerrar menú", function()
             S.confirm("Se cerrará la interfaz y se apagarán las features. ¿Continuar?", function()
@@ -3802,7 +3829,21 @@ local function boot(S)
 
     ui.panicBtn.MouseButton1Click:Connect(function() RT.panic() end)
 
+    S.captureKey = false
     UserInputService.InputBegan:Connect(function(input, processed)
+        -- capturador de tecla del menú (prioridad absoluta)
+        if S.captureKey then
+            S.captureKey = false
+            local name = input.KeyCode and input.KeyCode.Name or nil
+            if name and name ~= "Unknown" then
+                Config.Keybind = name
+                EventBus:Emit("ConfigChanged", "Keybind", name)
+                if S.keybindLabel then S.keybindLabel.set("Actual: " .. name) end
+                S.notify("Tecla", "Menú: " .. name, 2)
+            end
+            return
+        end
+
         local focused = UserInputService:GetFocusedTextBox()
         local ctrl = UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)
         if focused then
@@ -4013,8 +4054,8 @@ local function boot(S)
     if startTab then S.selectTab(startTab) end
     if S.syncMobile then S.syncMobile() end
 
-    S.notify("CASPER HUB PREMIUM v13.9", isMobile and "Interfaz lista · botón flotante para abrir" or ("Interfaz lista · " .. Config.Keybind), 4)
-    print("[CASPER HUB PREMIUM v13.9] Cargado con éxito.")
+    S.notify("CASPER HUB PREMIUM v14.1", isMobile and "Interfaz lista · botón flotante para abrir" or ("Interfaz lista · " .. Config.Keybind), 4)
+    print("[CASPER HUB PREMIUM v14.1] Cargado con éxito.")
 end
 
 -- ============================================================
