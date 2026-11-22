@@ -1,8 +1,11 @@
 --[[
-  CASPER HUB PREMIUM — v13.6
+  CASPER HUB PREMIUM — v13.7
   Móvil/PC + Delta/Xeno.
 
-  v13.6:
+  v13.7:
+   · fix blades trabadas: con repuestos disponibles se pausa el farm, se flota
+     en el aire y se pulsa R hasta recargar; luego se reanuda solo
+   v13.6:
    · Auto Loot Crate (recoge tu caja Crate_<tu nombre> con noclip y vuelve al drop)
    · pausa Auto Farm / Clear Wave mientras lootea y los reanuda después
   v13.5:
@@ -344,6 +347,7 @@ local function pushLog(title, message)
 end
 
 local CHANGELOG = {
+    "13.7 · fix blades trabadas: pausa el farm, flota y recarga con R",
     "13.6 · Auto Loot Crate con noclip, pausa y reanuda el farm",
     "13.5 · sección Wave completa, anti-choque Wave/Raid y Clear Wave/Auto Farm",
     "13.4 · pantalla de carga por etapas, watchdog y arranque escalonado",
@@ -372,7 +376,7 @@ local function buildLoader()
     local monogram = new("TextLabel", { Text = "C", Font = Enum.Font.GothamBlack, TextSize = 19, TextColor3 = Color3.new(1, 1, 1), TextTransparency = 1, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 5, Parent = logo })
 
     local title = new("TextLabel", { Text = "CASPER HUB", Font = Enum.Font.GothamBlack, TextSize = 17, TextColor3 = Color3.fromRGB(245, 247, 255), TextTransparency = 1, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 74), Size = UDim2.new(1, 0, 0, 20), ZIndex = 4, Parent = card })
-    local sub = new("TextLabel", { Text = "PREMIUM · v13.6", Font = Enum.Font.GothamBold, TextSize = 9, TextColor3 = accent, TextTransparency = 1, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 93), Size = UDim2.new(1, 0, 0, 13), ZIndex = 4, Parent = card })
+    local sub = new("TextLabel", { Text = "PREMIUM · v13.7", Font = Enum.Font.GothamBold, TextSize = 9, TextColor3 = accent, TextTransparency = 1, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 93), Size = UDim2.new(1, 0, 0, 13), ZIndex = 4, Parent = card })
 
     local stepLabel = new("TextLabel", { Text = "Iniciando", Font = Enum.Font.GothamMedium, TextSize = 11, TextColor3 = Color3.fromRGB(150, 158, 184), TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Position = UDim2.fromOffset(22, 122), Size = UDim2.new(1, -100, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 4, Parent = card })
     local percentLabel = new("TextLabel", { Text = "0%", Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = accent, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Right, BackgroundTransparency = 1, Position = UDim2.new(1, -70, 0, 122), Size = UDim2.fromOffset(48, 14), ZIndex = 4, Parent = card })
@@ -752,7 +756,7 @@ local function buildShell(S)
     ui.chipText = H.label(ui.chipHolder, "micro", "—", { Position = UDim2.fromOffset(19, 0), Size = UDim2.fromOffset(80, 20), TextColor3 = V.sub, ZIndex = 9 })
 
     local verBadge = new("Frame", { Size = UDim2.fromOffset(46, 18), Position = UDim2.fromOffset(186, 45), BackgroundColor3 = THEME.accent, BackgroundTransparency = 0.8, BorderSizePixel = 0, ZIndex = 8, Parent = header }, { corner(9) }); H.bindAccent(verBadge, "BackgroundColor3")
-    H.label(verBadge, "micro", "v13.6", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.new(1, 1, 1), ZIndex = 9 })
+    H.label(verBadge, "micro", "v13.7", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.new(1, 1, 1), ZIndex = 9 })
 
     local profile = new("Frame", { Size = UDim2.fromOffset(184, 40), Position = UDim2.new(1, -318, 0.5, -20), BackgroundColor3 = V.card, BackgroundTransparency = 0.45, BorderSizePixel = 0, ZIndex = 8, Parent = header }, { corner(20) })
     H.stroke(profile, V.strokeHi, 1, 0.5)
@@ -1027,7 +1031,8 @@ end
 -- ============================================================
 local function buildRuntime(S)
     local H = S.H
-    S.Farm = { Refilling = false, ReloadRejects = 0, ReloadSettleUntil = 0, BladesEmptyFor = 0, ActorSegments = nil, ActorReloads = nil, ActorActive = nil, SpearStuck = false, RecentlyRefilled = 0, LootBusy = false }
+    S.Farm = { Refilling = false, ReloadRejects = 0, ReloadSettleUntil = 0, BladesEmptyFor = 0, ActorSegments = nil, ActorReloads = nil, ActorActive = nil, SpearStuck = false, RecentlyRefilled = 0, LootBusy = false,
+        QuickReload = false, QuickFailed = 0, HoverPos = nil }
     local Farm = S.Farm
     local RT = S.RT
     local VALID_KEYS = { W = true, A = true, S = true, D = true, L = true }
@@ -1303,6 +1308,8 @@ local function buildRuntime(S)
         if not RT.bladesEmpty() then return false end
         local sp = spareLeft()
         if sp == 0 then return true end
+        -- si el R rápido ya falló, cae a la estación
+        if os.clock() < (Farm.QuickFailed or 0) then return true end
         if sp == nil then return (Farm.ReloadRejects or 0) >= 2 or (Farm.BladesEmptyFor or 0) >= 5 end
         return false
     end
@@ -1464,6 +1471,41 @@ local function buildRuntime(S)
         Farm.RecentlyRefilled = os.clock() + 10
         Farm.ReloadRejects = 0
         Farm.ReloadSettleUntil = os.clock() + 3
+    end
+
+    -- Parche blades trabadas: pausa el farm, se queda flotando y pulsa R
+    local QUICK_TRIES = 3
+    local function quickBladeReload()
+        local root = getRoot()
+        if not root then return false end
+        Farm.QuickReload = true
+        Farm.HoverPos = root.CFrame
+        local ok = false
+        pcall(function()
+            for _ = 1, QUICK_TRIES do
+                local r = getRoot()
+                if not r then break end
+                Farm.HoverPos = r.CFrame
+                RT.pressKey(Enum.KeyCode.R, 0.08)
+                local t0 = os.clock()
+                while os.clock() - t0 < 1.6 do
+                    if not RT.bladesEmpty() then ok = true break end
+                    if not Alive() then break end
+                    task.wait(0.1)
+                end
+                if ok then break end
+                task.wait(0.35)
+            end
+        end)
+        Farm.QuickReload = false
+        Farm.HoverPos = nil
+        if ok then
+            Farm.QuickFailed = 0
+            markRefilled()
+        else
+            S.notify("Refill", "R no respondió, yendo a estación", 3)
+        end
+        return ok
     end
 
     local function doRefill()
@@ -2250,7 +2292,13 @@ local function buildRuntime(S)
         task.wait(3)
         while S.ui.gui and S.ui.gui.Parent do
             local dt = RunService.Heartbeat:Wait()
-            if Config.AutoFarm and not isRefilling and not Farm.LootBusy then
+            if Farm.QuickReload and Farm.HoverPos then
+                local root = getRoot()
+                if root then
+                    root.CFrame = Farm.HoverPos
+                    pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+                end
+            elseif Config.AutoFarm and not isRefilling and not Farm.LootBusy then
                 local root = getRoot(); local titan = getTitan()
                 if root and titan then
                     local nape = napeOf(titan)
@@ -2347,6 +2395,25 @@ local function buildRuntime(S)
             task.wait(0.4)
             local ok, err = pcall(function()
                 local isWaveMode = Config.AutoRefillWave and waveFolder() ~= nil
+                -- Blades rotas con repuestos: pausa el farm y recarga con R en el aire
+                if not isWaveMode and Config.AutoRefillBlade and CanUseHere() and not Farm.LootBusy
+                    and not Farm.QuickReload and not Farm.Refilling
+                    and os.clock() >= (Farm.QuickFailed or 0) and RT.bladesEmpty() then
+                    local sp = spareLeft()
+                    local quick = (sp ~= nil and sp > 0) or (sp == nil and (Farm.BladesEmptyFor or 0) >= 1.5)
+                    if quick then
+                        local wait = math.max(1.2, (tonumber(Config.RefillCooldown) or 5) * 0.5)
+                        if os.clock() - lastRefill >= wait then
+                            Farm.Refilling = true; isRefilling = true
+                            local okQ = quickBladeReload()
+                            Farm.Refilling = false; isRefilling = false
+                            lastRefill = os.clock()
+                            since = nil
+                            if not okQ then Farm.QuickFailed = os.clock() + 20 end
+                            return
+                        end
+                    end
+                end
                 local needs = needBlade() or needThunder()
                 if isWaveMode then since = nil return end
                 if not (CanUseHere() and needs) then
@@ -3878,8 +3945,8 @@ local function boot(S)
     if startTab then S.selectTab(startTab) end
     if S.syncMobile then S.syncMobile() end
 
-    S.notify("CASPER HUB PREMIUM v13.6", isMobile and "Interfaz lista · botón flotante para abrir" or ("Interfaz lista · " .. Config.Keybind), 4)
-    print("[CASPER HUB PREMIUM v13.6] Cargado con éxito.")
+    S.notify("CASPER HUB PREMIUM v13.7", isMobile and "Interfaz lista · botón flotante para abrir" or ("Interfaz lista · " .. Config.Keybind), 4)
+    print("[CASPER HUB PREMIUM v13.7] Cargado con éxito.")
 end
 
 -- ============================================================
