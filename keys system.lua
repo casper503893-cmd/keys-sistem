@@ -1,7 +1,22 @@
 --[[
-  CASPER HUB PREMIUM — v14.2
+  CASPER HUB PREMIUM — v14.7
   Móvil/PC + Delta/Xeno.
 
+  v14.7:
+   · Auto Click por navegación de UI (Tab → derecha x2 → Enter) solo con la misión terminada
+   · 1 click por segundo por defecto, cooldown 1-10 s
+  v14.6:
+   · noclip en Auto Farm (no se queda trabado en estructuras)
+   · click del Auto Click más abajo por defecto (88%)
+  v14.5:
+   · Auto Click por porcentaje del alto del botón (default 78%) en vez de offset fijo
+  v14.4:
+   · fix golpes perdidos: fallback al objetivo, salto de titán atascado y techo de registros
+   · Auto Click clica bajo el texto RETRY con desplazamiento ajustable
+  v14.3:
+   · golpe a distancia con rango configurable y modo "todo el mapa"
+   · el vuelo no se apaga al recargar ni al quedarse sin refills
+   · vuelve a la estación automáticamente cuando hay cargas otra vez
   v14.2:
    · farmLoop reescrito: hover por velocidad, altitud retenida y ataque no bloqueante
    · distancia de ataque acotada 60-200 (FlyHeight pasa a ser distancia, default 120)
@@ -48,6 +63,7 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local ReplicatedStorage   = game:GetService("ReplicatedStorage")
 local Workspace           = game:GetService("Workspace")
 local HttpService         = game:GetService("HttpService")
+local GuiService          = game:GetService("GuiService")
 
 local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -73,11 +89,12 @@ CheckSavedKey()
 -- CONFIG
 -- ============================================================
 local Config = {
-    AutoFarm = false, FlySpeed = 600, FlyHeight = 120, AutoSkill = false,
+    AutoFarm = false, FlySpeed = 600, FlyHeight = 120, AutoSkill = false, NoclipFarm = true,
     AutoEscape = false, EscapeCooldownX100 = 15, EscapeMinSize = 20, DebugEscape = false,
     AutoRefillBlade = false, AutoRefillThunder = false, AutoRefillWave = false, AutoReloadR = true,
     RefillCooldown = 5, RefillSpeed = 800, WaveSpeed = 1000,
-    DamageMult = 10, HitCount = 5, AutoRetry = false, MassiveAttack = false,
+    DamageMult = 10, HitCount = 5, AutoRetry = false, MassiveAttack = false, AttackRange = 2000,
+    ClickPos = 88, ClickCooldown = 1,
     AutoCreateWave = false, AutoStartWave = false, AutoReady = false,
     AutoVoteSkip = false, AutoPlay = false, WaveMap = "Trost", WaveLevel = "Easy (E- Grade)",
     WaveJoinDelay = 10, AutoClearWave = false, ClearWaveRange = 300,
@@ -292,6 +309,9 @@ else
     end
 end
 Config.FlyHeight = math.clamp(tonumber(Config.FlyHeight) or 120, 60, 200)
+Config.AttackRange = math.clamp(tonumber(Config.AttackRange) or 2000, 100, 6000)
+Config.ClickPos = math.clamp(tonumber(Config.ClickPos) or 88, 20, 100)
+Config.ClickCooldown = math.clamp(tonumber(Config.ClickCooldown) or 1, 1, 10)
 SettingsStore.StartAutoSave("AOTR", function() return { Cfg = Config } end)
 SettingsStore.OnSaved = function() pcall(ConfigStore.SyncActive) end
 
@@ -367,6 +387,11 @@ local function pushLog(title, message)
 end
 
 local CHANGELOG = {
+    "14.7 · Auto Click por navegación de UI (Tab → derecha x2 → Enter) solo con la misión terminada",
+    "14.6 · noclip en Auto Farm y click del Auto Click más abajo",
+    "14.5 · Auto Click por porcentaje del alto del botón",
+    "14.4 · fix golpes perdidos + Auto Click bajo el texto RETRY",
+    "14.3 · golpe a distancia con rango configurable y modo todo el mapa",
     "14.2 · farmLoop con hover por velocidad, distancia acotada y altitud retenida",
     "14.1 · hotkey para Auto Clear Wave",
     "14.0 · recarga automática a 0 blades con pausa total y tecla de menú elegible",
@@ -398,7 +423,7 @@ local function buildLoader()
     local monogram = new("TextLabel", { Text = "C", Font = Enum.Font.GothamBlack, TextSize = 19, TextColor3 = Color3.new(1, 1, 1), TextTransparency = 1, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 5, Parent = logo })
 
     local title = new("TextLabel", { Text = "CASPER HUB", Font = Enum.Font.GothamBlack, TextSize = 17, TextColor3 = Color3.fromRGB(245, 247, 255), TextTransparency = 1, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 74), Size = UDim2.new(1, 0, 0, 20), ZIndex = 4, Parent = card })
-    local sub = new("TextLabel", { Text = "PREMIUM · v14.2", Font = Enum.Font.GothamBold, TextSize = 9, TextColor3 = accent, TextTransparency = 1, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 93), Size = UDim2.new(1, 0, 0, 13), ZIndex = 4, Parent = card })
+    local sub = new("TextLabel", { Text = "PREMIUM · v14.7", Font = Enum.Font.GothamBold, TextSize = 9, TextColor3 = accent, TextTransparency = 1, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 93), Size = UDim2.new(1, 0, 0, 13), ZIndex = 4, Parent = card })
 
     local stepLabel = new("TextLabel", { Text = "Iniciando", Font = Enum.Font.GothamMedium, TextSize = 11, TextColor3 = Color3.fromRGB(150, 158, 184), TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Position = UDim2.fromOffset(22, 122), Size = UDim2.new(1, -100, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 4, Parent = card })
     local percentLabel = new("TextLabel", { Text = "0%", Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = accent, TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Right, BackgroundTransparency = 1, Position = UDim2.new(1, -70, 0, 122), Size = UDim2.fromOffset(48, 14), ZIndex = 4, Parent = card })
@@ -458,7 +483,7 @@ if not isKeyVerified then
     local keyGui = new("ScreenGui", { Name = "KeySystem", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 1000, Parent = playerGui })
     local kf = new("Frame", { Size = UDim2.fromOffset(340, 268), Position = UDim2.new(0.5, -170, 0.5, -134), BackgroundColor3 = THEME.bg, BorderSizePixel = 0, Parent = keyGui }, { corner(18), new("UIStroke", { Color = THEME.accent, Thickness = 1.5, Transparency = 0.3 }) })
     new("TextLabel", { Text = "CASPER HUB", Font = Enum.Font.GothamBlack, TextSize = 25, TextColor3 = THEME.text, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 30), Size = UDim2.new(1, 0, 0, 34), Parent = kf })
-    new("TextLabel", { Text = "PREMIUM · v14.2", Font = Enum.Font.GothamBlack, TextSize = 11, TextColor3 = THEME.accent, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 64), Size = UDim2.new(1, 0, 0, 16), Parent = kf })
+    new("TextLabel", { Text = "PREMIUM · v14.7", Font = Enum.Font.GothamBlack, TextSize = 11, TextColor3 = THEME.accent, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 64), Size = UDim2.new(1, 0, 0, 16), Parent = kf })
     new("TextLabel", { Text = "Introduce tu key de acceso", Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = THEME.subtext, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 92), Size = UDim2.new(1, 0, 0, 18), Parent = kf })
     local tb = new("TextBox", { Text = "", PlaceholderText = "CASPER-XXXX", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = THEME.text, BackgroundColor3 = THEME.item, BorderSizePixel = 0, Position = UDim2.fromOffset(24, 124), Size = UDim2.new(1, -48, 0, 42), Parent = kf, ClearTextOnFocus = false }, { corner(10), new("UIStroke", { Color = Color3.fromRGB(50, 50, 70), Thickness = 1, Transparency = 0.3 }) })
     local sl = new("TextLabel", { Text = "", Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Color3.fromRGB(255, 90, 90), BackgroundTransparency = 1, Position = UDim2.fromOffset(24, 174), Size = UDim2.new(1, -48, 0, 20), Parent = kf })
@@ -778,7 +803,7 @@ local function buildShell(S)
     ui.chipText = H.label(ui.chipHolder, "micro", "—", { Position = UDim2.fromOffset(19, 0), Size = UDim2.fromOffset(80, 20), TextColor3 = V.sub, ZIndex = 9 })
 
     local verBadge = new("Frame", { Size = UDim2.fromOffset(46, 18), Position = UDim2.fromOffset(186, 45), BackgroundColor3 = THEME.accent, BackgroundTransparency = 0.8, BorderSizePixel = 0, ZIndex = 8, Parent = header }, { corner(9) }); H.bindAccent(verBadge, "BackgroundColor3")
-    H.label(verBadge, "micro", "v14.2", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.new(1, 1, 1), ZIndex = 9 })
+    H.label(verBadge, "micro", "v14.7", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.new(1, 1, 1), ZIndex = 9 })
 
     local profile = new("Frame", { Size = UDim2.fromOffset(184, 40), Position = UDim2.new(1, -318, 0.5, -20), BackgroundColor3 = V.card, BackgroundTransparency = 0.45, BorderSizePixel = 0, ZIndex = 8, Parent = header }, { corner(20) })
     H.stroke(profile, V.strokeHi, 1, 0.5)
@@ -1054,7 +1079,7 @@ end
 local function buildRuntime(S)
     local H = S.H
     S.Farm = { Refilling = false, ReloadRejects = 0, ReloadSettleUntil = 0, BladesEmptyFor = 0, ActorSegments = nil, ActorReloads = nil, ActorActive = nil, SpearStuck = false, RecentlyRefilled = 0, LootBusy = false,
-        QuickReload = false, QuickFailed = 0, HoverPos = nil, QuickTries = 0, LockKind = nil, LockUntil = 0, LastRefillEnd = 0, LastAttackError = nil }
+        QuickReload = false, QuickFailed = 0, HoverPos = nil, QuickTries = 0, LockKind = nil, LockUntil = 0, LastRefillEnd = 0, LastAttackError = nil, NoRefills = false, MissStreak = 0 }
     local Farm = S.Farm
     local RT = S.RT
     local VALID_KEYS = { W = true, A = true, S = true, D = true, L = true }
@@ -1118,6 +1143,20 @@ local function buildRuntime(S)
         end)
     end
 
+    -- Click por porcentaje del alto del objeto: 100 = borde inferior, 50 = centro.
+    RT.clickIn = function(obj, pct)
+        if not obj or not obj.Parent then return false end
+        local pos, size = obj.AbsolutePosition, obj.AbsoluteSize
+        local f = math.clamp((tonumber(pct) or 88) / 100, 0.05, 1)
+        local x = pos.X + size.X / 2
+        local y = pos.Y + size.Y * f
+        return pcall(function()
+            VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 0)
+            task.wait(0.05)
+            VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 0)
+        end)
+    end
+
     RT.checkEscape = function()
         if not Config.AutoEscape then return end
         local cooldown = (Config.EscapeCooldownX100 or 15) / 100
@@ -1144,12 +1183,19 @@ local function buildRuntime(S)
         return hit and hit:FindFirstChild("Nape")
     end
 
-    local function getTitan()
+    local function titanDead(titan)
+        if not titan or not titan.Parent then return true end
+        if titan:GetAttribute("Dead") == true then return true end
+        local hum = titan:FindFirstChildOfClass("Humanoid")
+        return hum == nil or hum.Health <= 0
+    end
+
+    local function getTitan(exclude)
         local titans = Workspace:FindFirstChild("Titans"); if not titans then return nil end
         local myRoot = getRoot(); if not myRoot then return nil end
         local closest, minDist = nil, math.huge
         for _, titan in ipairs(titans:GetChildren()) do
-            if titan:IsA("Model") then
+            if titan:IsA("Model") and titan ~= exclude then
                 local hum = titan:FindFirstChildOfClass("Humanoid")
                 local nape = napeOf(titan)
                 if hum and hum.Health > 0 and nape then
@@ -1161,6 +1207,29 @@ local function buildRuntime(S)
         return closest
     end
 
+    -- napes vivos ordenados por distancia. range = nil significa todo el mapa.
+    local function napesNear(root, range, cap)
+        local titans = Workspace:FindFirstChild("Titans")
+        if not titans then return {} end
+        local list = {}
+        for _, t in ipairs(titans:GetChildren()) do
+            if t:IsA("Model") and not titanDead(t) then
+                local n = napeOf(t)
+                if n then
+                    local d = (n.Position - root.Position).Magnitude
+                    if range == nil or d <= range then
+                        list[#list + 1] = { part = n, d = d }
+                    end
+                end
+            end
+        end
+        table.sort(list, function(a, b) return a.d < b.d end)
+        local out = {}
+        local top = math.min(math.max(1, cap or 1), #list)
+        for i = 1, top do out[i] = list[i].part end
+        return out
+    end
+
     local function napesAround(mainTitan, count)
         local mainNape = napeOf(mainTitan)
         if not mainNape then return {} end
@@ -1168,10 +1237,9 @@ local function buildRuntime(S)
         if not titans then return { mainNape } end
         local others = {}
         for _, t in ipairs(titans:GetChildren()) do
-            if t ~= mainTitan and t:IsA("Model") then
-                local hum = t:FindFirstChildOfClass("Humanoid")
+            if t ~= mainTitan and t:IsA("Model") and not titanDead(t) then
                 local n = napeOf(t)
-                if hum and hum.Health > 0 and n then
+                if n then
                     others[#others + 1] = { part = n, d = (n.Position - mainNape.Position).Magnitude }
                 end
             end
@@ -1182,31 +1250,35 @@ local function buildRuntime(S)
         return list
     end
 
-    local function attackTitan(titan, root)
+    -- Techo de registros por slash: por encima de ~40 el servidor empieza a descartar en ráfaga.
+    local REGISTER_CAP = 40
+
+    -- Un slash con N napes. Vale igual para farm a distancia y para Clear Wave.
+    local function attackParts(parts)
         local post = getPost()
-        if not post then return end
+        if not post or #parts == 0 then return false end
+        local want = math.max(1, tonumber(Config.DamageMult) or 1)
+        local perPart = math.max(1, math.floor(REGISTER_CAP / #parts))
+        local mult = math.min(want, perPart)
+        pcall(function()
+            post:FireServer("Attacks", "Slash", true)
+            for _ = 1, mult do
+                for _, part in ipairs(parts) do
+                    post:FireServer("Hitboxes", "Register", part, 143 + math.random() * 10, 0.26 + math.random() * 0.25)
+                end
+            end
+            post:FireServer("Attacks", "Slash", false)
+        end)
+        return true
+    end
+
+    local function attackTitan(titan, root)
         local nape = napeOf(titan)
         if not nape then return end
         if Config.MassiveAttack and root and (root.Position.Y - nape.Position.Y) > 45 then
-            local list = napesAround(titan, Config.HitCount)
-            pcall(function()
-                post:FireServer("Attacks", "Slash", true)
-                for _ = 1, (Config.DamageMult or 1) do
-                    for _, part in ipairs(list) do
-                        post:FireServer("Hitboxes", "Register", part, 143 + math.random() * 10, 0.26 + math.random() * 0.25)
-                    end
-                end
-                post:FireServer("Attacks", "Slash", false)
-            end)
-        else
-            pcall(function()
-                post:FireServer("Attacks", "Slash", true)
-                for _ = 1, (Config.DamageMult or 1) do
-                    post:FireServer("Hitboxes", "Register", nape, 143 + math.random() * 10, 0.26 + math.random() * 0.25)
-                end
-                post:FireServer("Attacks", "Slash", false)
-            end)
+            return attackParts(napesAround(titan, Config.HitCount))
         end
+        return attackParts({ nape })
     end
 
     local REFILL_PLACES = {
@@ -1529,7 +1601,7 @@ local function buildRuntime(S)
     end
 
     -- Recarga con R: se llama al llegar a 0 blades con repuestos.
-    -- Pausa todo, fija al personaje en el aire y pulsa R hasta que entra.
+    -- Pausa el ataque pero el personaje se queda volando donde estaba.
     local QUICK_TRIES = 4
     local function quickBladeReload()
         local root = getRoot()
@@ -1537,7 +1609,7 @@ local function buildRuntime(S)
         RT.lockRefill("quick", 2 + QUICK_TRIES * 2.2)
         Farm.QuickReload = true
         Farm.QuickTries = 0
-        Farm.HoverPos = root.CFrame
+        Farm.HoverPos = CFrame.new(root.Position)
         local ok = false
         pcall(function()
             for _ = 1, QUICK_TRIES do
@@ -1545,7 +1617,6 @@ local function buildRuntime(S)
                 local r = getRoot()
                 if not r then break end
                 Farm.QuickTries += 1
-                Farm.HoverPos = r.CFrame
                 RT.pressKey(Enum.KeyCode.R, 0.08)
                 local t0 = os.clock()
                 while os.clock() - t0 < 1.4 do
@@ -2036,10 +2107,9 @@ local function buildRuntime(S)
         if not titans then return {}, 0 end
         local list, alive = {}, 0
         for _, t in ipairs(titans:GetChildren()) do
-            if t:IsA("Model") then
-                local hum = t:FindFirstChildOfClass("Humanoid")
+            if t:IsA("Model") and not titanDead(t) then
                 local n = napeOf(t)
-                if hum and hum.Health > 0 and n then
+                if n then
                     alive += 1
                     local d = (n.Position - root.Position).Magnitude
                     if d <= range then list[#list + 1] = { part = n, d = d } end
@@ -2048,20 +2118,6 @@ local function buildRuntime(S)
         end
         table.sort(list, function(x, y) return x.d < y.d end)
         return list, alive
-    end
-    local function slashParts(parts)
-        local post = getPost()
-        if not post or #parts == 0 then return false end
-        pcall(function()
-            post:FireServer("Attacks", "Slash", true)
-            for _ = 1, math.max(1, tonumber(Config.DamageMult) or 1) do
-                for _, part in ipairs(parts) do
-                    post:FireServer("Hitboxes", "Register", part, 143 + math.random() * 10, 0.26 + math.random() * 0.25)
-                end
-            end
-            post:FireServer("Attacks", "Slash", false)
-        end)
-        return true
     end
     RT.clearWaveLoop = function()
         task.wait(3)
@@ -2091,7 +2147,7 @@ local function buildRuntime(S)
                 local cap = math.max(1, tonumber(Config.HitCount) or 1)
                 local parts = {}
                 for i = 1, math.min(cap, #list) do parts[i] = list[i].part end
-                if slashParts(parts) then
+                if attackParts(parts) then
                     setClear(("Limpiando: %d en rango (%d vivos)"):format(#parts, alive))
                 end
             end)
@@ -2232,6 +2288,24 @@ local function buildRuntime(S)
         end
     end
 
+    -- Noclip con dueños: loot y farm pueden pedirlo a la vez sin pisarse.
+    local noclipOwners = {}
+    local function noclipWant(owner, on)
+        local had = noclipOwners[owner] == true
+        if on then
+            if had then return end
+            noclipOwners[owner] = true
+        else
+            if not had then return end
+            noclipOwners[owner] = nil
+        end
+        setNoClip(next(noclipOwners) ~= nil)
+    end
+    RT.noclipOff = function()
+        noclipOwners = {}
+        setNoClip(false)
+    end
+
     local function flyTo(targetPos, maxTime)
         local r0 = liveRoot()
         if r0 then
@@ -2286,7 +2360,7 @@ local function buildRuntime(S)
         local wasFarm, wasClear = Config.AutoFarm, Config.AutoClearWave
         Config.AutoFarm = false; EventBus:Emit("ConfigChanged", "AutoFarm", false)
         Config.AutoClearWave = false; EventBus:Emit("ConfigChanged", "AutoClearWave", false)
-        setNoClip(true)
+        noclipWant("loot", true)
         pcall(function()
             lootStatus("Recogiendo caja (noclip)...")
             local root = liveRoot()
@@ -2303,7 +2377,7 @@ local function buildRuntime(S)
             flyTo(DROP_POS, 0.5)
             task.wait(0.5)
         end)
-        setNoClip(false)
+        noclipWant("loot", false)
         if wasFarm then Config.AutoFarm = true; EventBus:Emit("ConfigChanged", "AutoFarm", true) end
         if wasClear then Config.AutoClearWave = true; EventBus:Emit("ConfigChanged", "AutoClearWave", true) end
         lootStatus((wasFarm or wasClear) and "Vuelto. Reanudando." or "Vuelto.")
@@ -2346,30 +2420,64 @@ local function buildRuntime(S)
     end
 
     -- ==================== LOOPS ====================
-    -- Mientras se recarga, el personaje queda fijo en el aire.
-    -- === PATCH v14.2: hover por velocidad, altitud retenida, ataque no bloqueante ===
+    -- === v14.6: hover por velocidad, ataque a distancia, anti-atasco y noclip ===
     local STANDOFF_MIN, STANDOFF_MAX = 60, 200
     local ATTACK_GAP, ATTACK_GAP_DIST, NAPE_PUSH = 0.16, 4, 35
+    local HOVER_STOP = 0.6
+    local STUCK_LIMIT, STUCK_COOLDOWN = 14, 6
+
+    -- Vuelo por velocidad: nunca congela el CFrame, así el vuelo no se apaga.
+    local function hoverTo(root, targetPos, dt, speed)
+        local diff = targetPos - root.Position
+        local dist = diff.Magnitude
+        if dist > HOVER_STOP then
+            root.AssemblyLinearVelocity = diff.Unit * math.min(speed, dist / dt)
+        else
+            root.AssemblyLinearVelocity = Vector3.zero
+        end
+    end
 
     RT.farmLoop = function()
         task.wait(3)
-        local lastAttack, lastY, lastRoot, attacking = 0, nil, nil, false
+        local lastAttack, lastY, lastRoot, attacking, refillHold = 0, nil, nil, false, nil
+        local stuckTitan, stuckUntil = nil, 0
+        local noclipChar = nil
         while S.ui.gui and S.ui.gui.Parent do
             local dt = math.max(RunService.Heartbeat:Wait(), 1e-3)
-
-            if RT.refillBusy() then
-                local root = getRoot()
-                if root and Farm.HoverPos then
-                    root.CFrame = Farm.HoverPos
-                    pcall(function() root.AssemblyLinearVelocity = Vector3.zero end)
+            local root = getRoot()
+            if root then
+                if root ~= lastRoot then
+                    lastRoot, lastY, refillHold = root, nil, nil
+                    stuckTitan, stuckUntil, Farm.MissStreak = nil, 0, 0
                 end
-            elseif Config.AutoFarm and not Farm.LootBusy then
-                local root = getRoot()
-                if root then
-                    if root ~= lastRoot then lastRoot, lastY = root, nil end
-                    local titan = getTitan()
+                local speed = tonumber(Config.FlySpeed) or 600
+
+                -- noclip: se pide mientras el farm está activo, para no quedarse en estructuras
+                local char = player.Character
+                local wantNoclip = Config.NoclipFarm and Config.AutoFarm and CanUseHere() and not Farm.LootBusy and char ~= nil
+                if wantNoclip then
+                    if char ~= noclipChar then
+                        noclipChar = char
+                        setNoClip(true)
+                    end
+                    noclipOwners.farm = true
+                elseif noclipOwners.farm then
+                    noclipWant("farm", false)
+                    noclipChar = nil
+                end
+
+                if RT.refillBusy() then
+                    -- recarga: se sigue volando, sin tocar CFrame y sin atacar
+                    refillHold = refillHold or root.Position
+                    local targetPos = Farm.HoverPos and Farm.HoverPos.Position or refillHold
+                    lastY = targetPos.Y
+                    hoverTo(root, targetPos, dt, speed)
+                elseif Config.AutoFarm and not Farm.LootBusy then
+                    refillHold = nil
+                    -- si el objetivo actual no muere, se le deja enfriar y se busca otro
+                    local skip = (os.clock() < stuckUntil) and stuckTitan or nil
+                    local titan = getTitan(skip) or getTitan(nil)
                     local nape = titan and napeOf(titan)
-                    local speed = tonumber(Config.FlySpeed) or 600
                     local standoff = math.clamp(tonumber(Config.FlyHeight) or 120, STANDOFF_MIN, STANDOFF_MAX)
                     local targetPos
 
@@ -2377,7 +2485,6 @@ local function buildRuntime(S)
                         targetPos = nape.Position + Vector3.new(0, standoff, 0)
                         lastY = targetPos.Y
                     else
-                        -- sin titán: retener altitud, nunca desplomarse
                         targetPos = Vector3.new(root.Position.X, lastY or root.Position.Y, root.Position.Z)
                     end
 
@@ -2388,62 +2495,130 @@ local function buildRuntime(S)
                         if dist > ATTACK_GAP_DIST then
                             root.AssemblyLinearVelocity = diff.Unit * math.min(speed, dist / dt)
                         else
-                            -- empuje mínimo hacia la nuca: velocidad nunca 0, el daño escala y el registro entra
                             local toNape = nape.Position - root.Position
                             root.AssemblyLinearVelocity = toNape.Magnitude > 1e-3
                                 and toNape.Unit * NAPE_PUSH
                                 or Vector3.new(0, -NAPE_PUSH, 0)
                         end
-                        if not attacking and os.clock() - lastAttack >= ATTACK_GAP then
-                            lastAttack = os.clock()
+                    else
+                        hoverTo(root, targetPos, dt, speed)
+                    end
+
+                    -- golpe a distancia: no hace falta estar pegado al titán
+                    if not attacking and os.clock() - lastAttack >= ATTACK_GAP then
+                        lastAttack = os.clock()
+                        local range = Config.MassiveAttack and nil
+                            or math.clamp(tonumber(Config.AttackRange) or 2000, 100, 6000)
+                        local cap = math.max(1, tonumber(Config.HitCount) or 1)
+                        local parts = napesNear(root, range, cap)
+                        -- fallback: si el filtro de rango no devuelve nada pero hay objetivo, se le golpea igual
+                        if #parts == 0 and nape then parts = { nape } end
+                        if #parts > 0 then
+                            if titan and titan == stuckTitan then
+                                Farm.MissStreak += 1
+                                if Farm.MissStreak >= STUCK_LIMIT then
+                                    stuckUntil = os.clock() + STUCK_COOLDOWN
+                                    Farm.MissStreak = 0
+                                end
+                            elseif titan then
+                                stuckTitan, Farm.MissStreak = titan, 0
+                            end
                             attacking = true
                             task.spawn(function()
-                                local okA, errA = pcall(attackTitan, titan, root)
+                                local okA, errA = pcall(attackParts, parts)
                                 attacking = false
                                 if not okA then Farm.LastAttackError = tostring(errA) end
                             end)
-                        end
-                    else
-                        -- fuera de rango: acercarse por velocidad, no por CFrame
-                        if dist > 0.6 then
-                            root.AssemblyLinearVelocity = diff.Unit * math.min(speed, dist / dt)
-                        else
-                            root.AssemblyLinearVelocity = Vector3.zero
                         end
                     end
                 end
             end
         end
+        noclipWant("farm", false)
+    end
+
+    -- Titánes vivos ahora mismo. 0 = misión terminada.
+    local function livingTitans()
+        local titans = Workspace:FindFirstChild("Titans")
+        if not titans then return 0 end
+        local n = 0
+        for _, t in ipairs(titans:GetChildren()) do
+            if t:IsA("Model") and not titanDead(t) then n += 1 end
+        end
+        return n
+    end
+
+    local function findRetryButton()
+        for _, g in ipairs(playerGui:GetDescendants()) do
+            if g:IsA("TextLabel") or g:IsA("TextButton") then
+                local text = string.upper(g.Text or "")
+                if (text:match("^REINTENTAR") or text:match("^RETRY")) and isShown(g) then
+                    local btn = g
+                    if g:IsA("TextLabel") then
+                        local p = g.Parent
+                        for _ = 1, 4 do
+                            if not p or p == playerGui then break end
+                            if p:IsA("GuiButton") then btn = p break end
+                            p = p.Parent
+                        end
+                    end
+                    if btn and btn:IsA("GuiButton") then return btn end
+                    return g
+                end
+            end
+        end
+        return nil
+    end
+    RT.findRetryButton = findRetryButton
+
+    -- Navegación de UI: Tab para entrar en modo navegación, 2 a la derecha, Enter.
+    -- En móvil no hay Tab útil, así que se toca el botón directamente.
+    RT.navRetry = function(btn)
+        btn = btn or findRetryButton()
+        if not btn then return false end
+        if isMobile then
+            RT.clickIn(btn, tonumber(Config.ClickPos) or 88)
+            return true
+        end
+        RT.pressKey(Enum.KeyCode.Tab, 0.05)
+        task.wait(0.18)
+        if not GuiService.SelectedObject then
+            -- Tab no seleccionó nada: se fuerza la selección y se activa directo
+            pcall(function() GuiService.SelectedObject = btn end)
+            task.wait(0.12)
+            RT.pressKey(Enum.KeyCode.Return, 0.06)
+        else
+            RT.pressKey(Enum.KeyCode.Right, 0.05)
+            task.wait(0.1)
+            RT.pressKey(Enum.KeyCode.Right, 0.05)
+            task.wait(0.1)
+            RT.pressKey(Enum.KeyCode.Return, 0.06)
+        end
+        task.delay(0.7, function() pcall(function() GuiService.SelectedObject = nil end) end)
+        return true
     end
 
     RT.clickLoop = function()
         task.wait(3)
-        local lastPress = 0
+        local lastPress, emptySince = 0, nil
         while S.ui.gui and S.ui.gui.Parent do
-            task.wait(0.3)
-            if Config.AutoRetry and os.clock() - lastPress > 1 then
-                local found = nil
-                for _, g in ipairs(playerGui:GetDescendants()) do
-                    if g:IsA("TextLabel") or g:IsA("TextButton") then
-                        local text = string.upper(g.Text or "")
-                        if (text:match("^REINTENTAR") or text:match("^RETRY")) and g.Visible
-                            and g.AbsoluteSize.X > 0 and g.AbsoluteSize.Y > 0 then
-                            found = g; break
+            task.wait(0.2)
+            if not (Config.AutoRetry and CanUseHere()) then
+                emptySince = nil
+            elseif livingTitans() > 0 then
+                emptySince = nil
+            else
+                -- 0 titanes vivos: se confirma que la misión acabó antes de tocar nada
+                emptySince = emptySince or os.clock()
+                if os.clock() - emptySince >= 1.5 then
+                    local btn = findRetryButton()
+                    if btn then
+                        local gap = math.clamp(tonumber(Config.ClickCooldown) or 1, 1, 10)
+                        if os.clock() - lastPress >= gap then
+                            lastPress = os.clock()
+                            RT.navRetry(btn)
                         end
                     end
-                end
-                if found then
-                    lastPress = os.clock()
-                    local btn = found
-                    if found:IsA("TextLabel") then
-                        local p = found.Parent
-                        for _ = 1, 4 do
-                            if not p or p == playerGui then break end
-                            if p:IsA("GuiButton") then btn = p; break end
-                            p = p.Parent
-                        end
-                    end
-                    if btn:IsA("GuiButton") then clickGui(btn) end
                 end
             end
         end
@@ -2522,11 +2697,21 @@ local function buildRuntime(S)
                 since = since or os.clock()
                 if os.clock() - since < 1.0 then return end
                 if os.clock() - lastRefill < Config.RefillCooldown then return end
+                -- sin cargas en la estación: no se va, se queda volando y atacando,
+                -- y queda listo para salir en cuanto vuelva a haber cargas
                 local left = RT.refillsLeft()
                 if left ~= nil and left <= 0 then
-                    lastRefill = os.clock() - Config.RefillCooldown + 30
+                    if not Farm.NoRefills then
+                        Farm.NoRefills = true
+                        S.notify("Refill", "Sin cargas: sigo volando hasta que haya", 3)
+                    end
+                    lastRefill = os.clock() - Config.RefillCooldown
                     since = nil
                     return
+                end
+                if Farm.NoRefills then
+                    Farm.NoRefills = false
+                    S.notify("Refill", "Cargas disponibles, yendo a recargar", 2)
                 end
                 RT.lockRefill("station", 45)
                 local okRefill = doRefill()
@@ -2858,12 +3043,16 @@ local function buildRuntime(S)
     RT.panic = function()
         setFlags({})
         RT.unlockRefill()
+        RT.noclipOff()
+        Farm.NoRefills = false
+        Farm.MissStreak = 0
+        pcall(function() GuiService.SelectedObject = nil end)
         S.notify("Pánico", "Todas las features apagadas", 2)
     end
     S.PRESETS = {
         { name = "Farm AFK", tip = "Farm, skill y refill automático", flags = { AutoFarm = true, AutoSkill = true, AutoRefillBlade = true, AutoRefillThunder = true, AutoEscape = true } },
         { name = "Wave grind", tip = "Refill de oleada + farm", flags = { AutoRefillWave = true, AutoFarm = true, AutoSkill = true, AutoEscape = true, AutoRefillBlade = true } },
-        { name = "Wave auto", tip = "Crea, inicia, limpia y lootea solo", flags = { AutoPlay = true, AutoCreateWave = true, AutoStartWave = true, AutoReady = true, AutoVoteSkip = true, AutoClearWave = true, AutoLootCrate = true, AutoRefillBlade = true } },
+        { name = "Wave auto", tip = "Crea, inicia, limpia y lootea solo", flags = { AutoPlay = true, AutoCreateWave = true, AutoStartWave = true, AutoReady = true, AutoVoteSkip = true, AutoClearWave = true, AutoLootCrate = true, AutoRefillBlade = true, AutoRetry = true } },
         { name = "Raid solo", tip = "Prepara raid con skips y cofres", flags = { AutoSkipCutscene = true, AutoCannon = true, AutoOpenChestFree = true, AutoFinishChest = true } },
         { name = "Limpio", tip = "Apaga todo", flags = {} },
     }
@@ -3368,6 +3557,7 @@ local function buildTabs(S)
 
     S.addTab("Farm", "Combate", "farm", "Automatización y combate", function(api)
         Config.FlyHeight = math.clamp(tonumber(Config.FlyHeight) or 120, 60, 200)
+        Config.AttackRange = math.clamp(tonumber(Config.AttackRange) or 2000, 100, 6000)
         api.Section("Automatización")
         api.Toggle("Auto Farm", "AutoFarm", function(s)
             if s and Config.AutoClearWave then
@@ -3375,16 +3565,25 @@ local function buildTabs(S)
                 EventBus:Emit("ConfigChanged", "AutoClearWave", false)
             end
             S.notify("Auto Farm", s and "Activado" or "Desactivado", 2)
-        end, { requires = "game", tip = "Vuela al titán más cercano y ataca la nuca" })
+        end, { requires = "game", tip = "Vuela al titán más cercano y golpea las nucas en rango" })
         api.Toggle("Auto Skill", "AutoSkill", function(s) S.notify("Auto Skill", s and "Activado" or "Desactivado", 2) end, { requires = "game", tip = "Pulsa las skills 1-5 en bucle" })
+        api.Toggle("Noclip en farm", "NoclipFarm", function(s)
+            S.notify("Noclip", s and "ON (no te trabas)" or "OFF", 2)
+            if not s then RT.noclipOff() end
+        end, { requires = "game", tip = "Atraviesa estructuras mientras farmeas. Se restaura al apagarlo" })
         api.Section("Ajustes de vuelo")
         api.Slider("Velocidad", 100, 1500, "FlySpeed")
         api.Slider("Distancia de ataque", 60, 200, "FlyHeight")
         api.Label("Mantén 100-140. Por encima de 180 vuelves al borde del radio de validación.", 30)
-        api.Section("Combate")
-        api.Toggle("Ataque Masivo Aéreo", "MassiveAttack", function(s) S.notify("Ataque Masivo", s and "Activado" or "Desactivado", 2) end, { requires = "game", tip = "Golpea varios titanes cercanos a la vez" })
+        api.Section("Golpe")
+        api.Toggle("Ataque a todo el mapa", "MassiveAttack", function(s)
+            S.notify("Alcance", s and "Global (ignora el rango)" or "Limitado por rango", 2)
+        end, { requires = "game", tip = "Ignora el rango y golpea titanes en cualquier parte del mapa" })
+        api.Slider("Rango de golpe", 100, 6000, "AttackRange")
+        api.Label("Baja el rango si el servidor empieza a descartar registros. El número de titanes por slash lo fija 'Titanes por golpe'.", 34)
+        api.Slider("Titanes por golpe", 1, 15, "HitCount")
         api.Slider("Daño Multiplicado", 1, 20, "DamageMult")
-        api.Slider("Titanes por ataque", 1, 15, "HitCount")
+        api.Label("Si un titán no muere, el script le deja de pegar 6 s y pasa a otro. Con 'Daño Multiplicado' alto se recorta el número de registros para no saturar.", 40)
     end)
 
     S.addTab("Wave", "Combate", "wave", "Wave mode, votos y limpieza", function(api)
@@ -3537,22 +3736,31 @@ local function buildTabs(S)
         api.Label("Modifiers: " .. (#Config.RaidModifiers > 0 and table.concat(Config.RaidModifiers, ", ") or "ninguno"))
     end)
 
-    S.addTab("Auto Click", "Utilidad", "click", "Clicks automáticos", function(api)
+    S.addTab("Auto Click", "Utilidad", "click", "RETRY por navegación de UI", function(api)
         api.Section("Ajustes")
-        api.Toggle("Auto Click", "AutoRetry", function(s) S.notify("Auto Click", s and "Activado" or "Desactivado", 2) end, { requires = "game", tip = "Pulsa REINTENTAR / RETRY solo" })
-        api.Label("Busca botones de reintento en la interfaz del juego.")
+        api.Toggle("Auto Click", "AutoRetry", function(s) S.notify("Auto Click", s and "Activado" or "Desactivado", 2) end, { requires = "game", tip = "Solo con 0 titanes vivos: navega la UI y pulsa RETRY" })
+        api.Slider("Cooldown (s)", 1, 10, "ClickCooldown")
+        api.Label("Solo actúa cuando la misión ha terminado (0 titanes vivos). Entra en navegación de UI con Tab, va 2 veces a la derecha y pulsa Enter sobre RETRY. El porcentaje vertical solo se usa en móvil.", 44)
+        api.Slider("Posición vertical (%) [móvil]", 20, 100, "ClickPos")
+        api.Button("Probar navegación RETRY", function()
+            local btn = RT.findRetryButton()
+            if not btn then S.notify("Auto Click", "No hay botón RETRY en pantalla", 2) return end
+            RT.navRetry(btn)
+            S.notify("Auto Click", "Navegación enviada (Tab → → Enter)", 1.5)
+        end)
     end)
 
     S.addTab("Refill", "Utilidad", "refill", "Relleno de equipo", function(api)
         api.Section("Recarga de blades")
         api.Toggle("Auto Reload R", "AutoReloadR", function(s)
             S.notify("Auto Reload R", s and "ON (pulsa R solo)" or "OFF", 2)
-        end, { requires = "game", tip = "Al quedarte a 0 blades con repuestos: pausa todo, flota y pulsa R solo" })
+        end, { requires = "game", tip = "Al quedarte a 0 blades con repuestos: pausa el ataque, sigue volando y pulsa R solo" })
         api.Toggle("Auto Refill Blades", "AutoRefillBlade", function(s) S.notify("Refill Blades", s and "Activado" or "Desactivado", 2) end, { requires = "game", tip = "Igual que el anterior y, sin repuestos, va a la estación" })
         api.Toggle("Auto Refill Thunder", "AutoRefillThunder", function(s) S.notify("Refill Thunder", s and "Activado" or "Desactivado", 2) end, { requires = "game" })
         api.Section("Ajustes")
         api.Slider("Cooldown refill", 1, 30, "RefillCooldown")
         api.Slider("Velocidad refill", 100, 2000, "RefillSpeed")
+        api.Label("Sin cargas en la estación el personaje sigue volando y atacando; va solo en cuanto vuelve a haber cargas.", 34)
         api.Button("Refill manual (1 vez)", function()
             local assets = ReplicatedStorage:FindFirstChild("Assets")
             local remotes = assets and assets:FindFirstChild("Remotes")
@@ -3575,9 +3783,11 @@ local function buildTabs(S)
             S.notify("Refill Debug",
                 "Seg: " .. tostring(seg) .. " · Rel: " .. tostring(rel) ..
                 " · Refills: " .. tostring(RT.refillsLeft() or "?") ..
+                " · SinCargas: " .. tostring(S.Farm.NoRefills) ..
                 " · Lock: " .. tostring(S.Farm.LockKind) ..
                 " · Quedan: " .. string.format("%.1f", (S.Farm.LockUntil or 0) - os.clock()) ..
                 " · Quick: " .. tostring(S.Farm.QuickReload) ..
+                " · Miss: " .. tostring(S.Farm.MissStreak) ..
                 " · SpearStuck: " .. tostring(S.Farm.SpearStuck), 8)
         end)
     end)
@@ -3666,6 +3876,7 @@ local function buildTabs(S)
         local remoteStat = api.Stat("Remotes")
         local actorStat = api.Stat("Actor")
         local errStat = api.Stat("Último error")
+        local attackStat = api.Stat("Último ataque")
         api.Section("Acciones")
         api.Button("Refrescar", function()
             placeStat.set(tostring(game.PlaceId))
@@ -3675,6 +3886,7 @@ local function buildTabs(S)
             remoteStat.set(remotes and "OK" or "FALTAN")
             actorStat.set(S.Farm.ActorActive and (S.Farm.ActorActive() and "ENLAZADO" or "sin enlace") or "n/d")
             errStat.set(S.lastError or "ninguno")
+            attackStat.set(S.Farm.LastAttackError or "ninguno")
         end)
         api.Button("Copiar informe", function()
             local text = table.concat({
@@ -3685,6 +3897,13 @@ local function buildTabs(S)
                 "reloads=" .. tostring(S.Farm.ActorReloads and S.Farm.ActorReloads()),
                 "refills=" .. tostring(RT.refillsLeft()),
                 "lock=" .. tostring(S.Farm.LockKind),
+                "range=" .. tostring(Config.AttackRange),
+                "global=" .. tostring(Config.MassiveAttack),
+                "hits=" .. tostring(Config.HitCount),
+                "miss=" .. tostring(S.Farm.MissStreak),
+                "clickpos=" .. tostring(Config.ClickPos),
+                "clickcd=" .. tostring(Config.ClickCooldown),
+                "noclip=" .. tostring(Config.NoclipFarm),
                 "keybind=" .. tostring(Config.Keybind),
                 "error=" .. tostring(S.lastError),
             }, "\n")
@@ -4082,6 +4301,7 @@ local function boot(S)
     ui.gui.Destroying:Connect(function()
         pcall(function() ui.tooltipGui:Destroy() end)
         pcall(function() ui.cursorGui:Destroy() end)
+        pcall(function() GuiService.SelectedObject = nil end)
     end)
 
     -- Estado inicial
@@ -4103,8 +4323,8 @@ local function boot(S)
     if startTab then S.selectTab(startTab) end
     if S.syncMobile then S.syncMobile() end
 
-    S.notify("CASPER HUB PREMIUM v14.2", isMobile and "Interfaz lista · botón flotante para abrir" or ("Interfaz lista · " .. Config.Keybind), 4)
-    print("[CASPER HUB PREMIUM v14.2] Cargado con éxito.")
+    S.notify("CASPER HUB PREMIUM v14.7", isMobile and "Interfaz lista · botón flotante para abrir" or ("Interfaz lista · " .. Config.Keybind), 4)
+    print("[CASPER HUB PREMIUM v14.7] Cargado con éxito.")
 end
 
 -- ============================================================
